@@ -260,15 +260,22 @@ var Module = {
     setInterval(() => {
       Module._sd_set_pad(pad);
       Module._sd_tick();
-      const se = Module._sd_se_take();
-      if (se) playSe(Module.UTF8ToString(se), Module._sd_se_pan());
-      if (Module._sd_rank_stamp() !== rankStamp) {
-        rankStamp = Module._sd_rank_stamp();
-        rankSave();
-      }
-      if (Module._sd_demo_stamp() !== demoStamp) {
-        demoStamp = Module._sd_demo_stamp();
-        demoSave();
+      // Everything that leaves the module - sound, localStorage, a download -
+      // is wrapped: a browser refusing one of them must not stop the game
+      // loop, or the screen freezes and the keys look dead for ever.
+      try {
+        const se = Module._sd_se_take();
+        if (se) playSe(Module.UTF8ToString(se), Module._sd_se_pan());
+        if (Module._sd_rank_stamp() !== rankStamp) {
+          rankStamp = Module._sd_rank_stamp();
+          rankSave();
+        }
+        if (Module._sd_demo_stamp() !== demoStamp) {
+          demoStamp = Module._sd_demo_stamp();
+          demoSave();
+        }
+      } catch (e) {
+        diagEl.textContent = 'sound/save: ' + (e && e.message);
       }
       const p = Module._sd_framebuffer();
       img.data.set(Module.HEAPU8.subarray(p, p + w * h * 4));
