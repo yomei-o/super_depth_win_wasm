@@ -53,6 +53,9 @@ if [ "$what" = check ]; then
     ./tmp/sd_shot.exe pat   disk/staff.dar  tmp/depthlogo.png 1
     ./tmp/sd_shot.exe pat   disk/ending.dar tmp/earth.png 0
     ./tmp/sd_shot.exe text  disk/depth.dar  tmp/text.png
+    ./tmp/sd_shot.exe demo  disk/depth.dar  tmp/demo_sea.png   920  | tail -1
+    ./tmp/sd_shot.exe demo  disk/depth.dar  tmp/demo_air.png   3000 | tail -1
+    ./tmp/sd_shot.exe demo  disk/depth.dar  tmp/demo_space.png 5000 | tail -1
     echo "== music"
     ./tmp/midi2wav.exe disk/bgm01.mid tmp/bgm01.wav 10
     if [ -f superdepth.js ]; then

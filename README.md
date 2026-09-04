@@ -115,6 +115,7 @@ native の道具と検査を全部作って走らせ、PNG を `tmp/` に吐く�
 
 ```
 tmp/sd_shot.exe play  disk/depth.dar tmp/a.png 200   200 フレーム遊んだ画面
+tmp/sd_shot.exe demo  disk/depth.dar tmp/d.png 5000  原作の録画を 5000 フレーム再生した画面
 tmp/sd_shot.exe game  disk/depth.dar tmp/b.png 30    状態機械を 30 フレーム
 tmp/sd_shot.exe sheet disk/depth1.dar tmp/c.png      パターン一覧
 tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ

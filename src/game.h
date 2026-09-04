@@ -256,7 +256,8 @@ enum { MENU_MUSIC = 0x85d,              /* オプション, in both menus */
        DBG_FULLPOWER = 0x85f,
        DBG_LOGO = 0x86d, DBG_TITLE = 0x86e,
        DBG_ENDING = 0x86f, DBG_STAFF = 0x870,
-       DBG_STAGE07 = 0x872, DBG_STAGE12 = 0x877,
+       DBG_STAGE07 = 0x872, DBG_STAGE08 = 0x873, DBG_STAGE09 = 0x874,
+       DBG_STAGE10 = 0x875, DBG_STAGE11 = 0x876, DBG_STAGE12 = 0x877,
        DBG_DEMO_REC = 0x878, DBG_DEMO_PLAY = 0x87b };
 int  game_debug(Game *g, int cmd);
 

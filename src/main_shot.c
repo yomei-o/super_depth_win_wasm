@@ -77,7 +77,7 @@ int main(int argc, char **argv)
     int rc;
 
     if (argc < 3) {
-        fprintf(stderr, "usage: sd_shot pat|sheet|list|text <file.dar> [out.png] [n]\n");
+        fprintf(stderr, "usage: sd_shot pat|sheet|list|text|raw|play|demo|game <file.dar> [out.png] [n]\n");
         return 2;
     }
     rc = dar_load(&dar, argv[2]);
@@ -207,6 +207,33 @@ int main(int argc, char **argv)
                "kills %d/%d, charges %d)\n", frames, argv[3], game.state,
                game.hook, game.p.score, game.p.kills, game.p.quota,
                game.p.charges);
+        return 0;
+    }
+    if (!strcmp(argv[1], "demo")) {
+        /* Let the title fall into the attract demo and play the original's
+         * own recording (disk/demo1.dat) for a while, so any frame of real
+         * play can be looked at without a browser or a keyboard. */
+        static Video vid;
+        static Game game;
+        int frames = argc > 4 ? atoi(argv[4]) : 1, i;
+
+        vid_init(&vid, &dar);
+        game_init(&game, &vid);
+        game_set_date(&game, 1999, 2, 14);
+        for (i = 0; i < 400 && game.state != ST_TITLE; i++) game_tick(&game);
+        for (i = 0; i < 0x70c && game.state == ST_TITLE; i++) game_tick(&game);
+        for (i = 0; i < frames; i++) game_tick(&game);
+        memcpy(gfx.px, vid.px, sizeof gfx.px);
+        memcpy(gfx.pal, vid_palette(&vid), sizeof gfx.pal);
+        if (save(argv[3], &gfx, GFX_W, GFX_H)) {
+            fprintf(stderr, "cannot write %s\n", argv[3]);
+            return 1;
+        }
+        printf("%d frames of the recording -> %s (state %02x hook %d, "
+               "stage %d, score %d, kills %d/%d, %d of %d frames read)\n",
+               frames, argv[3], game.state, game.hook, game.p.stage,
+               game.p.score, game.p.kills, game.p.quota, game.recat,
+               game.reclen);
         return 0;
     }
     if (!strcmp(argv[1], "game")) {

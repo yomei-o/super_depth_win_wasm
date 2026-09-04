@@ -208,6 +208,47 @@ int main(void)
     game_debug(&game, DBG_FULLPOWER);
     ok(p->speed > 0 && p->charges > 0, "full power fills the ship up");
 
+    /* ---- every stage the ステージセレクト offers --------------------
+     * The readme says only the first four are playable ("でも現在は４面
+     * までしか遊べません"): stages 4, 8 and 12 ask for enemy kinds 4, 8 and
+     * 12 in their table, and 8 and 12 have no code at all.  Nothing may
+     * fall over on any of them. */
+    {
+        static const int CMD[12] = {
+            DBG_STAGE01, DBG_STAGE02, DBG_STAGE03, DBG_STAGE04,
+            DBG_STAGE05, DBG_STAGE06, DBG_STAGE07, DBG_STAGE08,
+            DBG_STAGE09, DBG_STAGE10, DBG_STAGE11, DBG_STAGE12
+        };
+        int n;
+
+        to_title();
+        game_set_pad(&game, PAD_BTN1);      /* Game Start */
+        game_tick(&game);
+        game_set_pad(&game, 0);
+        game_tick(&game);
+        game.nodie = 1;                     /* 死なない, so it keeps going */
+        for (n = 0; n < 12; n++) {
+            int j;
+
+            ok(game_debug(&game, CMD[n]) == 1, "the stage select takes it");
+            for (j = 0; j < 400; j++) {
+                game_set_pad(&game, j % 64 < 32 ? PAD_LEFT : PAD_RIGHT);
+                game_tick(&game);
+                if (p->inflight < 0 || p->inflight > CHARGES) break;
+                if (p->ntorp < 0 || p->ntorp > TORPS) break;
+                if (p->nenemy < 0 || p->nenemy > ENEMIES) break;
+            }
+            game_set_pad(&game, 0);
+            ok(p->stage == n + 1, "and stays on that stage");
+            ok(p->inflight >= 0 && p->inflight <= CHARGES &&
+               p->ntorp >= 0 && p->ntorp <= TORPS &&
+               p->nenemy >= 0 && p->nenemy <= ENEMIES,
+               "with the counts still in range");
+        }
+        game.nodie = 0;
+        shot("tmp/end_stage12.png");
+    }
+
     /* ---- リセット (0x860), which the release menu has as well -------- */
     ok(game_debug(&game, MENU_RESET) == 1, "reset is one of ours");
     ok(game.state == ST_BOOT, "and it goes back to the start");
