@@ -72,6 +72,10 @@ typedef struct {            /* DAT_004a8548, 5 ints, 64 of them */
 
 #define POPUPS 64
 
+typedef struct { int x, y, vx, kind; } Star;  /* DAT_004a9110, 256 of them */
+
+#define STARS 256
+
 typedef struct {
     /* the player - a ship, so only x moves */
     int px, py;             /* DAT_004644dc / DAT_004644d8 */
@@ -120,6 +124,17 @@ typedef struct {
     EShot s[ESHOTS];
     Splash sp[SPLASHES];
     Popup pop[POPUPS];
+
+    /* the name entry (FUN_0040bdb0) */
+    int rankin;             /* DAT_004a9038, which row the score takes */
+    int rcurx, rcury;       /* DAT_004a9044 / DAT_004a9048 */
+    int repeat;             /* DAT_004a9060, the key-repeat delay */
+    int namelen;            /* DAT_004a903c */
+    char nm[16];            /* DAT_004b01e8, what has been typed */
+    char date[16];          /* DAT_004a9050, "YY/MM/DD" */
+    int nnames, pickname;   /* DAT_004a9040 / DAT_004a904c, the DUP list */
+    char names[16][16];     /* DAT_004a9064 */
+    Star star[STARS];
 
     /* the pause menu (FUN_0040b960) */
     int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */

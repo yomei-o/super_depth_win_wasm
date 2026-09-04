@@ -160,6 +160,7 @@ int main(int argc, char **argv)
 
         vid_init(&vid, &dar);
         game_init(&game, &vid);
+        game_set_date(&game, 1999, 2, 14);   /* the build's own date */
         for (i = 0; i < 400 && game.state != ST_TITLE; i++) game_tick(&game);
         game_tick(&game);
         game_set_pad(&game, PAD_BTN1);
@@ -187,6 +188,7 @@ int main(int argc, char **argv)
 
         vid_init(&vid, &dar);
         game_init(&game, &vid);
+        game_set_date(&game, 1999, 2, 14);   /* the build's own date */
         for (i = 0; i < frames; i++) game_tick(&game);
         memcpy(gfx.px, vid.px, sizeof gfx.px);
         memcpy(gfx.pal, vid_palette(&vid), sizeof gfx.pal);

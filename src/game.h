@@ -93,6 +93,8 @@ typedef struct {
 
     unsigned pad, pad_prev;             /* the spread block and its copy */
     int second, second_prev;            /* DAT_004bf88c / DAT_004bfc94 */
+    int year, month, day;               /* DAT_004bf878 / 87c / 880 */
+    int clear_next;                     /* DAT_004492cc, clear at the end */
     int fps, fps_count;                 /* DAT_004bf8a0 / DAT_004bf8a4 */
 
     int flash;                          /* DAT_0046217c, white frames left */
@@ -147,9 +149,10 @@ int  plat_read(const char *name, unsigned char *buf, int max);
 
 void game_init(Game *g, Video *v);
 void game_set_pad(Game *g, unsigned pad);
-/* The wall clock second, which is all the game uses the clock for (the FPS
- * counter at the end of the frame). */
+/* GetLocalTime's fields, which the game uses for the FPS counter and for
+ * the date it stamps a high score with. */
 void game_set_second(Game *g, int second);
+void game_set_date(Game *g, int year, int month, int day);
 /* One frame: FUN_00401500 followed by FUN_004209a0's own bookkeeping. */
 void game_tick(Game *g);
 
@@ -174,5 +177,10 @@ void game_scene(Game *g, const char *name, int count);
 void play_frame(Game *g);
 void play_clear_frame(Game *g);         /* FUN_00408210, the stage clear */
 void play_pause_frame(Game *g);         /* FUN_0040b960, the pause menu */
+void play_over_frame(Game *g);          /* FUN_0040bdb0, the name entry */
+/* FUN_0040bbb0 and its wrapper FUN_0040bb60: one row of the score table. */
+void play_rank_row_of(Game *g, int rank, int score, int stage,
+                      const char *name, const char *date, int bank);
+void play_rank_row(Game *g, int rank);
 
 #endif

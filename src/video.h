@@ -96,6 +96,16 @@ void vid_pat_raw(Video *v, int x, int y, int pat);
  * subtracting half the pattern's own width and height. */
 void vid_pat_centre(Video *v, int cx, int cy, int pat);
 
+/* FUN_004092a0 -> FUN_0041bad0: the same pattern with every row pushed
+ * sideways by a sine, which is how the name-entry screen's backdrop waves.
+ * `wave` is the wavelength - a negative one flips the amplitude on every
+ * other row - `amp` the displacement and `phase` the scroll (the original
+ * hands it the frame counter).  The sine is the original's own 256-byte
+ * table at 0x442178, +-127.
+ */
+void vid_pat_wave(Video *v, int x, int y, int pat, int wave, int amp,
+                  int phase);
+
 /* FUN_00402980: the row is in 16-pixel units. */
 void vid_text(Video *v, int col, int row, const char *s, int bank);
 /* FUN_00402a20: y in pixels. */

@@ -592,6 +592,43 @@ static void enemy_update(Game *g, int i, int *slot)
     }
 }
 
+/* FUN_0040bbb0: one line of the score table.  The caller hands over the
+ * fields, because the name entry draws a row that is not in the table yet.
+ *
+ * The two patterns are glyphs out of the 16x16 font: the rank's own digit
+ * (0x30 + rank, so '1'..'9', and 0x14 for the tenth) and one of the four
+ * markers at 0x10..0x13, which stop rising after the third place. */
+void play_rank_row_of(Game *g, int rank, int score, int stage,
+                      const char *name, const char *date, int bank)
+{
+    Video *v = g->v;
+    char line[64];
+    int row = rank + 5;
+    int y = row * 0x10;
+    int n = rank == 10 ? 0x14 : rank + 0x30;
+    int k = rank - 1;
+
+    if (k < 0) k = 0;
+    else if (k > 3) k = 3;
+
+    vid_pat(v, 0x50, y, bank + n);
+    vid_pat(v, 0x60, y, bank + 0x10 + k);
+    sprintf(line, "%05d0", score);
+    vid_text(v, 0x0f, row, line, bank);
+    sprintf(line, "%02d", stage);
+    vid_text(v, 0x1e, row, line, bank);
+    vid_text(v, 0x24, row, name, bank);
+    vid_text(v, 0x36, row, date, bank);
+}
+
+/* FUN_0040bb60: a row straight out of the table, in white. */
+void play_rank_row(Game *g, int rank)
+{
+    const Rank *r = &g->rank[rank - 1];
+
+    play_rank_row_of(g, rank, r->score, r->stage, r->name, r->date, FNT_WHITE);
+}
+
 /* FUN_004096e0: the ship's own two blips on the sonar panel. */
 static void sonar_player(Game *g)
 {
@@ -1250,4 +1287,219 @@ void play_pause_frame(Game *g)
         g->hook = p->saved_hook;
         g->hook_arg = 0;
     }
+}
+
+/* 0x44055c: three rows of 0x21 bytes - 32 cells and a terminator.  The
+ * original keeps a space where the quote goes and patches 0x22 in at
+ * runtime (and then hardcodes the same pattern for that cell anyway); it is
+ * written out here.  Row 2 is mostly blank: only DEL, DUP and END. */
+static const char NAME_GRID[3][33] = {
+    " !\"#$%&'()*+,-./0123456789:;<=>?",
+    "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_",
+    "                     DEL DUP END"
+};
+
+/* FUN_0040bdb0: the game is over, and if the score is good enough this is
+ * where the name goes in.  space.dar's two big pictures wave behind a
+ * starfield, the table is drawn with the new row in yellow, and a 3x32 grid
+ * of characters is walked with the pad.
+ */
+void play_over_frame(Game *g)
+{
+    Play *p = &g->p;
+    Video *v = g->v;
+    const DarPat *a, *b;
+    char line[64];
+    int i, j, x, y, n;
+
+    if (g->hook_arg) {
+        g->hook_arg = 0;
+        /* Where does it rank?  Off the bottom of the table and there is
+         * nothing to type: straight back to the logo. */
+        for (i = 0; i < RANKS && p->score <= g->rank[i].score; i++) ;
+        if (i >= RANKS) {
+            game_set_state(g, ST_LOGO);
+            g->hook = HOOK_NONE;
+            g->hook_arg = 1;
+            return;
+        }
+        p->rcurx = 0;
+        p->rcury = 0;
+        p->repeat = 0;
+        p->nm[0] = 0;
+        p->namelen = 0;
+        p->rankin = i;
+        game_scene(g, "space.dar", 0x32);
+        plat_bgm(1, "bgm08");
+        sprintf(p->date, "%02d/%02d/%02d", g->year % 100, g->month, g->day);
+        memset(p->names, 0, sizeof p->names);
+        p->nnames = 0;
+        p->pickname = 0;
+        for (i = 0; i < RANKS; i++) {   /* the distinct names, for DUP */
+            int dup = 0;
+            for (j = 0; j < p->nnames; j++)
+                if (!strcmp(p->names[j], g->rank[i].name)) { dup = 1; break; }
+            if (!dup && p->nnames < 16) {
+                strncpy(p->names[p->nnames], g->rank[i].name, 15);
+                p->nnames++;
+            }
+        }
+        for (i = 0; i < STARS; i++) {
+            p->star[i].x = game_rand(g) % 0x240;
+            p->star[i].y = game_rand(g) % 0x1a0;
+            p->star[i].vx = -2 - game_rand(g) % 6;
+            p->star[i].kind = game_rand(g) % 16;
+        }
+    }
+
+    a = vid_pat_info(v, EXT_BASE + 48);         /* SPACE1 */
+    b = vid_pat_info(v, EXT_BASE + 49);         /* SPACE2 */
+    if (a && b) {
+        vid_pat_wave(v, 0x2c0 - a->w, 0x1f8 - b->h, EXT_BASE + 48,
+                     -0x100, 0x10, (int)g->frame);
+        vid_pat_wave(v, -0x60, -0x60, EXT_BASE + 49,
+                     -0x100, 0x10, (int)g->frame);
+    }
+    for (i = 0; i < STARS; i++) {
+        Star *st = &p->star[i];
+        st->x += st->vx;
+        if (st->x < 0) {
+            st->x += 0x280;
+            st->y = game_rand(g) % 0x240;       /* 0x240, not 0x1a0 */
+        }
+        vid_pat(v, st->x, st->y, 0xb2e + st->kind);
+    }
+
+    vid_text(v, 10, 2, "Super Depth  Top Score Ranking", FNT_RED);
+    strcpy(line, " ** Score ****  Name     Date   ");
+    line[1] = 0x15; line[2] = 0x16;
+    line[10] = 0x17; line[11] = 0x18; line[12] = 0x19; line[13] = 0x1a;
+    vid_text(v, 8, 4, line, FNT_WHITE);
+    vid_text(v, 8, 5, "--------------------------------", FNT_WHITE);
+    vid_text(v, 8, 0x10, "--------------------------------", FNT_WHITE);
+    for (i = 0; i < RANKS; i++)
+        if (i != p->rankin) play_rank_row(g, i + 1);
+    sprintf(p->date, "%02d/%02d/%02d", g->year % 100, g->month, g->day);
+    play_rank_row_of(g, p->rankin + 1, p->score, p->stage, p->nm, p->date,
+                     FNT_YELLOW);
+    x = p->namelen < 8 ? (p->namelen + 0x12) * 0x10 : 400;
+    if (g->frame % 4 < 2)
+        vid_pat_raw(v, x, (p->rankin + 8) * 0x10, 0x880);
+
+    for (y = 0; y < 3; y++)
+        for (x = 0; x < 0x20; x++)
+            vid_pat(v, (x + 4) * 0x10, y * 0x20 + 0x130,
+                    (unsigned char)NAME_GRID[y][x] + FNT_WHITE);
+
+    /* The pad is read held, with a delay before it repeats. */
+    if (p->repeat == 0 || p->repeat > 10) {
+        if (g->pad & PAD_RIGHT) {
+            p->rcurx++;
+            if (p->rcury >= 0) {
+                if (p->rcury < 2) { if (p->rcurx > 0x1f) p->rcurx = 0; }
+                else if (p->rcury == 2 && p->rcurx > 2) p->rcurx = 0;
+            }
+        }
+        if (g->pad & PAD_LEFT) {
+            p->rcurx--;
+            if (p->rcurx < 0 && p->rcury >= 0) {
+                if (p->rcury < 2) p->rcurx = 0x1f;
+                else if (p->rcury == 2) p->rcurx = 2;
+            }
+        }
+        if (g->pad & PAD_UP) {
+            if (p->rcury == 0) {
+                if (p->rcurx < 0 || p->rcurx > 0x17)
+                    n = (p->rcurx >= 0x18 && p->rcurx <= 0x1b) ? 1 : 2;
+                else n = 0;
+                p->rcury = 2;
+                p->rcurx = n;
+            } else if (p->rcury == 1) {
+                p->rcury = 0;
+            } else if (p->rcury == 2) {
+                if (p->rcurx == 0) p->rcurx = 0x16;
+                else if (p->rcurx == 1) p->rcurx = 0x1a;
+                else if (p->rcurx == 2) p->rcurx = 0x1e;
+                p->rcury = 1;
+            }
+        }
+        n = p->rcurx;
+        if (g->pad & PAD_DOWN) {
+            if (p->rcury == 0) {
+                p->rcury = 1;
+            } else if (p->rcury == 1) {
+                if (n < 0 || n > 0x17) p->rcurx = (n >= 0x18 && n <= 0x1b) ? 1 : 2;
+                else p->rcurx = 0;
+                p->rcury = 2;
+            } else if (p->rcury == 2) {
+                if (p->rcurx == 0) p->rcurx = 0x16;
+                else if (p->rcurx == 1) p->rcurx = 0x1a;
+                else if (p->rcurx == 2) p->rcurx = 0x1e;
+                p->rcury = 0;
+            }
+        }
+    }
+    if (!(g->pad & (PAD_LEFT | PAD_RIGHT | PAD_UP | PAD_DOWN))) {
+        p->repeat = 0;
+    } else {
+        n = p->repeat + 1;
+        p->repeat = n < 0 ? 0 : (n < 0xd ? n : 0xc);
+    }
+
+    if (game_any_key(g) && p->rcury >= 0) {
+        plat_se("depth01", 0);
+        if (p->rcury < 2) {
+            n = p->namelen > 7 ? 7 : p->namelen;
+            p->namelen = n + 1;
+            p->nm[n] = NAME_GRID[p->rcury][p->rcurx & 0x1f];
+            p->nm[n + 1] = 0;
+            if (n + 1 > 7) {            /* eight characters is the lot */
+                p->rcurx = 2;
+                p->rcury = 2;
+            }
+        } else if (p->rcury == 2) {
+            if (p->rcurx == 0) {                        /* DEL */
+                if (p->namelen > 0) {
+                    p->nm[p->namelen - 1] = 0;
+                    p->namelen--;
+                }
+            } else if (p->rcurx == 1) {                 /* DUP */
+                if (p->nnames > 0) {
+                    strncpy(p->nm, p->names[p->pickname], sizeof p->nm - 1);
+                    p->nm[sizeof p->nm - 1] = 0;
+                    p->pickname = (p->pickname + 1) % p->nnames;
+                    p->namelen = (int)strlen(p->nm);
+                }
+            } else if (p->rcurx == 2) {                 /* END */
+                for (i = RANKS - 1; i > p->rankin; i--)
+                    g->rank[i] = g->rank[i - 1];
+                memset(&g->rank[p->rankin], 0, sizeof g->rank[p->rankin]);
+                strncpy(g->rank[p->rankin].name, p->nm,
+                        sizeof g->rank[p->rankin].name - 1);
+                strncpy(g->rank[p->rankin].date, p->date,
+                        sizeof g->rank[p->rankin].date - 1);
+                g->rank[p->rankin].score = p->score;
+                g->rank[p->rankin].stage = p->stage;
+                g->clear_next = 1;      /* DAT_004492cc */
+                game_set_state(g, ST_TITLE);
+                g->hook = HOOK_NONE;
+                g->hook_arg = 1;
+                return;
+            }
+        }
+    }
+
+    /* the block cursor on the grid, on for two frames out of four */
+    if (p->rcury < 0) return;
+    x = p->rcury < 2 ? (p->rcurx + 4) * 0x10 : p->rcurx * 0x40 + 400;
+    if (g->frame % 4 < 2) {
+        if (p->rcury == 2) {
+            vid_pat_raw(v, x, 400, 0x880);
+            vid_pat_raw(v, x + 0x10, 400, 0x880);
+            x += 0x20;
+        }
+        vid_pat_raw(v, x, p->rcury * 0x20 + 0x150, 0x880);
+    }
+    /* The original formats "rankin = %d rcurX = %02d rcurY = %02d" here and
+     * then never draws it. */
 }

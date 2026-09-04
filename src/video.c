@@ -83,6 +83,62 @@ void vid_pat(Video *v, int x, int y, int pat)
     vid_pat_raw(v, x, y + SCR_YOFF, pat);
 }
 
+/* The sine at 0x442178: 256 signed bytes, a quarter-wave repeated and
+ * negated, and slightly flat at the top - so it is written out as the
+ * original has it rather than computed. */
+static const signed char VID_SINE[256] = {
+    0, 3, 6, 9, 12, 15, 18, 21, 24, 28, 31, 34, 37, 40, 43, 46,
+    48, 51, 54, 57, 60, 63, 65, 68, 71, 73, 76, 78, 81, 83, 85, 88,
+    90, 92, 94, 96, 98, 100, 102, 104, 106, 108, 109, 111, 112, 114, 115, 117,
+    118, 119, 120, 121, 122, 123, 124, 124, 125, 126, 126, 127, 127, 127, 127, 127,
+    127, 127, 127, 127, 127, 127, 126, 126, 125, 124, 124, 123, 122, 121, 120, 119,
+    118, 117, 115, 114, 112, 111, 109, 108, 106, 104, 102, 100, 98, 96, 94, 92,
+    90, 88, 85, 83, 81, 78, 76, 73, 71, 68, 65, 63, 60, 57, 54, 51,
+    48, 46, 43, 40, 37, 34, 31, 28, 24, 21, 18, 15, 12, 9, 6, 3,
+    0, -3, -6, -9, -12, -15, -18, -21, -24, -28, -31, -34, -37, -40, -43, -46,
+    -48, -51, -54, -57, -60, -63, -65, -68, -71, -73, -76, -78, -81, -83, -85, -88,
+    -90, -92, -94, -96, -98, -100, -102, -104, -106, -108, -109, -111, -112, -114, -115, -117,
+    -118, -119, -120, -121, -122, -123, -124, -124, -125, -126, -126, -127, -127, -127, -127, -127,
+    -127, -127, -127, -127, -127, -127, -126, -126, -125, -124, -124, -123, -122, -121, -120, -119,
+    -118, -117, -115, -114, -112, -111, -109, -108, -106, -104, -102, -100, -98, -96, -94, -92,
+    -90, -88, -85, -83, -81, -78, -76, -73, -71, -68, -65, -63, -60, -57, -54, -51,
+    -48, -46, -43, -40, -37, -34, -31, -28, -24, -21, -18, -15, -12, -9, -6, -3,
+};
+
+void vid_pat_wave(Video *v, int x, int y, int pat, int wave, int amp,
+                  int phase)
+{
+    const DarPat *p = vid_pat_info(v, pat);
+    static short dx[SCR_H * 2];
+    int flip, r, clip, a, n;
+    const Dar *d;
+
+    if (!p) return;
+    /* FUN_004092a0's clipping, which is FUN_00409000's. */
+    if (y >= 0x1f1) return;
+    if (!(-0x21 < p->w + x && x < 0x261)) return;
+    if (y < -p->h) return;
+
+    flip = wave < 0;
+    if (flip) wave = -wave;
+    if (wave == 0) return;
+
+    /* The original counts its rows from the first one that is not
+     * clipped off the top, so the wave starts there too. */
+    clip = y + SCR_YOFF < 0 ? -(y + SCR_YOFF) : 0;
+    a = amp;
+    for (r = 0; r < p->h && r < (int)(sizeof dx / sizeof *dx); r++) {
+        if (r < clip) { dx[r] = 0; continue; }
+        n = ((r - clip) * 0x200) / wave;
+        dx[r] = (short)((VID_SINE[(phase + n) & 0xff] * a) >> 7);
+        if (flip) a = -a;
+    }
+    d = pat >= EXT_BASE ? v->ext : v->dar;
+    if (!d) return;
+    dar_draw_wave(d, pat >= EXT_BASE ? pat - EXT_BASE : pat,
+                  &v->px[0][0], SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, dx);
+}
+
 void vid_pat_centre(Video *v, int cx, int cy, int pat)
 {
     const DarPat *p = vid_pat_info(v, pat);

@@ -338,34 +338,6 @@ static void hook_menu(Game *g)
     }
 }
 
-/* FUN_0040bb60 + FUN_0040bbb0: one line of the score table.  The caller
- * passes the record's fields separately; here the record is to hand.
- *
- * The two patterns are glyphs out of the 16x16 white font: the rank's own
- * digit (0x30 + rank, so '1'..'9', and 0x14 for the tenth) and one of the
- * four markers at 0x10..0x13, which stop rising after the third place. */
-static void rank_row(Game *g, int rank)
-{
-    Video *v = g->v;
-    const Rank *r = &g->rank[rank - 1];
-    char line[64];
-    int row = rank + 5;
-    int y = row * 0x10;
-    int n = rank == 10 ? 0x14 : rank + 0x30;
-    int k = rank - 1;
-
-    if (k < 0) k = 0;
-    else if (k > 3) k = 3;
-
-    vid_pat(v, 0x50, y, FNT_WHITE + n);
-    vid_pat(v, 0x60, y, FNT_WHITE + 0x10 + k);
-    sprintf(line, "%05d0", r->score);
-    vid_text(v, 0x0f, row, line, FNT_WHITE);
-    sprintf(line, "%02d", r->stage);
-    vid_text(v, 0x1e, row, line, FNT_WHITE);
-    vid_text(v, 0x24, row, r->name, FNT_WHITE);
-    vid_text(v, 0x36, row, r->date, FNT_WHITE);
-}
 
 /* FUN_00414b00, the other overlay: the score table, on top of whatever state
  * is running - which is the title, since that is where it is armed from.
@@ -391,7 +363,7 @@ static void hook_record(Game *g)
     vid_text(v, 8, 5, "--------------------------------", FNT_WHITE);
     vid_text(v, 8, 0x10, "--------------------------------", FNT_WHITE);
 
-    for (i = 1; i < 11; i++) rank_row(g, i);
+    for (i = 1; i < 11; i++) play_rank_row(g, i);
 
     if ((int)(g->frame % 0x10) < 8)
         vid_text(v, 0x12, 0x12, "Hit any key to return.", FNT_YELLOW);
@@ -642,9 +614,7 @@ static void st_play(Game *g)
         vid_text8_at(g->v, 0x1c, 0x16, "FUN_0040c9e0 is not ported yet");
         break;
     case HOOK_OVER:
-        /* FUN_0040bdb0, the name entry, is not ported yet. */
-        vid_text(g->v, 0x1e, 8, "Game Over", FNT_RED);
-        vid_text8_at(g->v, 0x1e, 0x16, "FUN_0040bdb0 is not ported yet");
+        play_over_frame(g);
         break;
     }
     /* The end of FUN_00405c10: a recorded demo that has run out goes back to
@@ -708,8 +678,10 @@ static void frame(Game *g)
         if (g->flash % 2 != 0) vid_clear(v, 0xff);
         g->flash--;
     }
-    /* DAT_004492cc would clear the surface here as well, but nothing in the
-     * binary ever sets it. */
+    /* DAT_004492cc: the name entry sets this when it writes the score in, so
+     * the frame it leaves on ends up blank. */
+    if (g->clear_next) vid_clear(v, 0);
+    g->clear_next = 0;
 
     /* The frame the game runs inside, which is what the 32 pixel offset in
      * video.h leaves room for: pattern 0x9d9 tiled along all four edges,
@@ -765,6 +737,13 @@ void game_init(Game *g, Video *v)
 
 void game_set_pad(Game *g, unsigned pad) { g->pad = pad; }
 void game_set_second(Game *g, int second) { g->second = second; }
+
+void game_set_date(Game *g, int year, int month, int day)
+{
+    g->year = year;
+    g->month = month;
+    g->day = day;
+}
 
 void game_tick(Game *g)
 {

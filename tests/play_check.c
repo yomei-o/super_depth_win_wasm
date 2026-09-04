@@ -67,6 +67,16 @@ static void tap(unsigned bit)
     game_set_pad(&game, 0);
 }
 
+/* Hold a direction for one frame and let go, which moves the name entry's
+ * cursor once: it reads the pad held, with a delay before it repeats. */
+static void step(unsigned bit)
+{
+    game_set_pad(&game, bit);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    game_tick(&game);
+}
+
 static void ok(int cond, const char *what)
 {
     if (!cond) { printf("FAIL %s\n", what); fails++; }
@@ -85,6 +95,7 @@ static void start_game(void)
     int i;
 
     game_init(&game, &vid);
+    game_set_date(&game, 1999, 2, 14);   /* the build's own date */
     for (i = 0; i < 400 && game.state != ST_TITLE; i++) game_tick(&game);
     game_tick(&game);                                   /* the title's first */
     game_set_pad(&game, PAD_BTN1);
@@ -274,8 +285,68 @@ int main(void)
     tap(PAD_BTN1);
     ok(game.state == ST_BOOT, "and EXIT drops out to the logo");
 
+    /* Game over with a score worth putting in the table: the name entry.
+     * The default table tops out at a thousand points, so five thousand
+     * takes first place. */
+    start_game();
+    p->hit = 1;
+    p->lives = 0;
+    p->score = 5000;
+    p->life = 1;
+    for (t = 0; t < 400 && game.hook == HOOK_PLAY; t++) game_tick(&game);
+    ok(game.hook == HOOK_OVER, "the last life ends the game");
+    game_tick(&game);                                   /* its first frame */
+    ok(p->rankin == 0, "and the score takes first place");
+    ok(vid.ext && vid.ext->count == 50, "space.dar is in the slots at 0xb47");
+    ok(!strcmp(bgm_last, "bgm08") && bgm_mode_last == 1, "bgm08 plays");
+    ok(!strcmp(p->date, "99/02/14"), "the date is stamped YY/MM/DD");
+    ok(p->nnames > 0, "the names already in the table are listed for DUP");
+    shot("tmp/play_name.png");
+    ok(p->rcurx == 0 && p->rcury == 0, "the cursor starts on the first cell");
+    step(PAD_DOWN);
+    ok(p->rcury == 1, "DOWN moves to the letters");
+    step(PAD_RIGHT);
+    ok(p->rcurx == 1, "RIGHT moves along them");
+    tap(PAD_BTN1);
+    ok(!strcmp(p->nm, "A"), "and the button types one");
+    ok(p->namelen == 1, "which the length follows");
+    step(PAD_DOWN);
+    ok(p->rcury == 2, "DOWN again reaches DEL / DUP / END");
+    ok(p->rcurx == 0, "on DEL");
+    tap(PAD_BTN1);
+    ok(p->namelen == 0 && p->nm[0] == 0, "which deletes the letter");
+    /* UP from DEL lands on the far end of the letter row, at 'V'. */
+    step(PAD_UP);
+    ok(p->rcury == 1 && p->rcurx == 0x16, "UP from DEL goes to V");
+    step(PAD_RIGHT);
+    tap(PAD_BTN1);
+    ok(!strcmp(p->nm, "W"), "another letter");
+    step(PAD_DOWN);
+    step(PAD_RIGHT);
+    step(PAD_RIGHT);
+    ok(p->rcury == 2 && p->rcurx == 2, "and along to END");
+    shot("tmp/play_name2.png");
+    tap(PAD_BTN1);
+    ok(!strcmp(game.rank[0].name, "W"), "END writes the name into the table");
+    ok(game.rank[0].score == 5000, "with the score");
+    ok(!strcmp(game.rank[0].date, "99/02/14"), "and the date");
+    ok(game.rank[0].stage == 1, "and the stage it got to");
+    ok(game.rank[1].score == 100, "the old first place moves down");
+    ok(game.state == ST_TITLE, "then it goes back to the title");
+
+    /* A score that is not good enough goes straight back to the logo. */
+    start_game();
+    p->hit = 1;
+    p->lives = 0;
+    p->score = 1;
+    p->life = 1;
+    for (t = 0; t < 400 && game.hook == HOOK_PLAY; t++) game_tick(&game);
+    game_tick(&game);
+    ok(game.state == ST_LOGO, "too small a score skips the name entry");
+
     /* The attract demo plays DEMO1.DAT back through the pad. */
     game_init(&game, &vid);
+    game_set_date(&game, 1999, 2, 14);   /* the build's own date */
     for (t = 0; t < 400 && game.state != ST_TITLE; t++) game_tick(&game);
     for (t = 0; t < 0x708 + 4 && game.state == ST_TITLE; t++) game_tick(&game);
     ok(game.state == ST_TITLE3, "the title falls into the demo");

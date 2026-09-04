@@ -98,8 +98,8 @@ int dar_find(const Dar *d, const char *name)
     return -1;
 }
 
-int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
-             int outW, int outH, int x0, int y0)
+static int draw_rows(const Dar *d, int n, unsigned char *out, int stride,
+                     int outW, int outH, int x0, int y0, const short *rowdx)
 {
     const DarPat *p;
     int y;
@@ -115,6 +115,7 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
                                  (long)(p->h - 1 - y) * p->stride;
         const unsigned char *end = q + p->stride;
         int ty = y0 + y;
+        int shift = rowdx ? rowdx[y] : 0;
         int x = 0;
 
         while (x < p->w && q + 4 <= end) {
@@ -127,7 +128,7 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
             x += clear;
             if (run == 0) break;                /* a zero run ends the row */
             for (i = 0; i < run; i++, x++) {
-                int tx = x0 + x;
+                int tx = x0 + shift + x;
                 if (x >= p->w) break;
                 if (ty < 0 || ty >= outH || tx < 0 || tx >= outW) continue;
                 out[(long)ty * stride + tx] = q[i];
@@ -136,4 +137,16 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
         }
     }
     return 0;
+}
+
+int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
+             int outW, int outH, int x0, int y0)
+{
+    return draw_rows(d, n, out, stride, outW, outH, x0, y0, NULL);
+}
+
+int dar_draw_wave(const Dar *d, int n, unsigned char *out, int stride,
+                  int outW, int outH, int x0, int y0, const short *rowdx)
+{
+    return draw_rows(d, n, out, stride, outW, outH, x0, y0, rowdx);
 }

@@ -202,8 +202,12 @@ EMSCRIPTEN_KEEPALIVE void sd_tick(void)
     if (g_view == 0) {
         time_t t = time(NULL);
         struct tm *lt = localtime(&t);
-        /* GetLocalTime's wSecond is all the game uses the clock for. */
+        /* GetLocalTime: the second drives the FPS counter and the date
+         * is what a high score is stamped with. */
         game_set_second(&g_game, lt ? lt->tm_sec : 0);
+        if (lt)
+            game_set_date(&g_game, lt->tm_year + 1900, lt->tm_mon + 1,
+                          lt->tm_mday);
         game_tick(&g_game);
     } else {
         draw_view();

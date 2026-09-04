@@ -53,6 +53,12 @@ void dar_free(Dar *d);
 int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
              int outW, int outH, int x, int y);
 
+/* The same thing with each row shifted sideways: `rowdx[r]` is added to the
+ * x of the pattern's row r.  That is how WinGL's FUN_0041bad0 draws its
+ * wavy pictures; video.c works out the displacements. */
+int dar_draw_wave(const Dar *d, int n, unsigned char *out, int stride,
+                  int outW, int outH, int x, int y, const short *rowdx);
+
 /* Which pattern carries this name, or -1.  The game looks patterns up by
  * name at load time (`PatEntryName('%s')`). */
 int dar_find(const Dar *d, const char *name);
