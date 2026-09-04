@@ -40,7 +40,7 @@ int game_rand(Game *g)
  * been entered.  The original also zeroes 0xe100 dwords of object area at
  * DAT_004c0070 (FUN_004223c0); here every state keeps its own fields and
  * clears them on entry instead. */
-static void set_state(Game *g, int st)
+void game_set_state(Game *g, int st)
 {
     g->entered = 1;
     g->state = st;
@@ -63,7 +63,7 @@ static int same_name(const char *a, const char *b)
  * have been longer than the span; here depth.dar simply stays loaded.  It
  * ends by handing pattern 0xb48 to FUN_004178e0, which is where the screen
  * palette comes from - vid_scene does that part. */
-static void scene(Game *g, const char *name, int count)
+void game_scene(Game *g, const char *name, int count)
 {
     if (same_name(g->scene_name, name)) return;
     dar_free(&g->scene);
@@ -84,18 +84,19 @@ static void scene(Game *g, const char *name, int count)
  * only reachable from a joystick - the key table has nothing on 0x400.
  * While a recorded demo is playing (demo 1 or 2) the original reads the
  * demo's own key at DAT_004bf868's place; demo playback is not ported. */
-static int any_key(Game *g)
+int game_any_key(Game *g)
 {
     game_rand(g);
     if (g->demo == 0)
         return (((g->pad & PAD_BTN1) && !(g->pad_prev & PAD_BTN1)) ||
                 ((g->pad & PAD_JOY7) && !(g->pad_prev & PAD_JOY7))) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x10) ? 1 : 0;
     return 0;
 }
 
 /* FUN_00402ec0: the same thing for the start button (bit 0x1000, F2).  It
  * burns a random number too. */
-static int start_key(Game *g)
+int game_start_key(Game *g)
 {
     game_rand(g);
     if (g->demo == 0 || g->demo == 1)
@@ -104,9 +105,37 @@ static int start_key(Game *g)
 }
 
 /* The pad edges the menu reads straight out of WinGL's spread block. */
-static int edge(const Game *g, unsigned bit)
+int game_edge(const Game *g, unsigned bit)
 {
     return ((g->pad & bit) && !(g->pad_prev & bit)) ? 1 : 0;
+}
+
+/* FUN_00402e50: BTN2, the other depth charge.  Like the BTN1 test it also
+ * looks at a joystick-only bit (DAT_004bf86c). */
+int game_btn2(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0)
+        return (game_edge(g, PAD_BTN2) || game_edge(g, 0x800)) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x20) ? 1 : 0;
+    return 0;
+}
+
+/* FUN_00402fd0 and FUN_00403020: LEFT and RIGHT, held rather than edged. */
+int game_left(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0) return (g->pad & PAD_LEFT) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x04) ? 1 : 0;
+    return 0;
+}
+
+int game_right(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0) return (g->pad & PAD_RIGHT) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x08) ? 1 : 0;
+    return 0;
 }
 
 /* ---- the states ------------------------------------------------------- */
@@ -120,7 +149,7 @@ static void st_boot(Game *g)
         g->flash = 0;
     }
     g->hook = 0;
-    set_state(g, ST_LOGO);
+    game_set_state(g, ST_LOGO);
 }
 
 /* case 0xf / case 0x10: the Bio_100% logo.
@@ -141,7 +170,7 @@ static void st_logo(Game *g)
     if (g->entered) {
         g->entered = 0;
         g->sub = 0;
-        scene(g, "staff.dar", 0x123);
+        game_scene(g, "staff.dar", 0x123);
         plat_bgm(0, "bgm01");
         for (i = 0; i < LOGO_ROWS; i++) g->logo_row[i] = 1;
         g->logo_timer = 0;
@@ -178,7 +207,7 @@ static void st_logo(Game *g)
             g->logo_left++;
         }
         if (g->logo_left > LOGO_ROWS - 1) {
-            set_state(g, ST_TITLE);
+            game_set_state(g, ST_TITLE);
             g->hook = 0;                /* thunk_FUN_00402450(0, 1) */
             g->hook_arg = 1;
         }
@@ -195,7 +224,7 @@ static void st_logo(Game *g)
 
     g->logo_timer++;
     if (g->logo_timer > 0x77) g->logo_phase = 2;
-    if (any_key(g) && g->logo_phase >= 0 && g->logo_phase < 2) g->logo_phase = 2;
+    if (game_any_key(g) && g->logo_phase >= 0 && g->logo_phase < 2) g->logo_phase = 2;
 }
 
 /* FUN_00402800: the SUPER DEPTH logo, laid out of 16x16 tiles from depth.dar
@@ -247,31 +276,31 @@ static void hook_menu(Game *g)
         g->menu_idle = 0;
         g->draw_new = 0;
     }
-    if (edge(g, PAD_DOWN)) {
+    if (game_edge(g, PAD_DOWN)) {
         g->menu_idle = 0;
         if (++g->menu_cur > 2) g->menu_cur = 0;
     }
-    if (edge(g, PAD_UP)) {
+    if (game_edge(g, PAD_UP)) {
         g->menu_idle = 0;
         if (--g->menu_cur < 0) g->menu_cur = 2;
     }
-    if (any_key(g) || start_key(g)) {
+    if (game_any_key(g) || game_start_key(g)) {
         g->menu_idle = 0;
         switch (g->menu_cur) {
         case 0:                         /* Game Start */
-            set_state(g, ST_TITLE2);
+            game_set_state(g, ST_TITLE2);
             g->hook = HOOK_PLAY;
             g->hook_arg = 1;
             g->draw = DRAW_NONE;
             g->draw_new = 1;
             break;
         case 1:                         /* Record */
-            plat_se("depth01");
+            plat_se("depth01", 0);
             g->draw = DRAW_RECORD;
             g->draw_new = 1;
             break;
         case 2:                         /* Exit */
-            set_state(g, ST_VERSION);
+            game_set_state(g, ST_VERSION);
             break;
         }
     }
@@ -284,7 +313,7 @@ static void hook_menu(Game *g)
     /* 0x708 frames of nobody touching anything - 59 seconds at 33ms - and
      * the demo takes over. */
     if (++g->menu_idle >= 0x708) {
-        set_state(g, ST_TITLE3);
+        game_set_state(g, ST_TITLE3);
         g->hook = HOOK_PLAY;
         g->hook_arg = 1;
         g->draw = DRAW_NONE;
@@ -350,8 +379,8 @@ static void hook_record(Game *g)
     if ((int)(g->frame % 0x10) < 8)
         vid_text(v, 0x12, 0x12, "Hit any key to return.", FNT_YELLOW);
 
-    if (edge(g, PAD_BTN1)) {
-        plat_se("depth01");
+    if (game_edge(g, PAD_BTN1)) {
+        plat_se("depth01", 0);
         g->draw = DRAW_MENU;            /* FUN_004148f0(&LAB_0040118b, 0) - */
         g->draw_new = 0;                /* a 0, so the menu keeps its cursor */
     }
@@ -371,7 +400,7 @@ static void st_title(Game *g)
     if (g->entered) {
         g->entered = 0;
         g->sub = 0;
-        scene(g, "depth1.dar", 9);
+        game_scene(g, "depth1.dar", 9);
         for (i = 0; i < FISH; i++) {
             g->fish_y[i] = 0;           /* DAT_00449260 */
             g->fish_vx[i] = 0;          /* DAT_00446514; x is left as it was */
@@ -505,6 +534,116 @@ static void st_version(Game *g)
     g->quit = 1;
 }
 
+/* FUN_0040b250: the big clear the play states do on the way in.  Everything
+ * the port keeps for the game lives in one struct, so this is a memset and
+ * the counters that are not zero. */
+static void play_clear(Game *g)
+{
+    Play keep;
+
+    memset(&keep, 0, sizeof keep);
+    g->p = keep;
+}
+
+/* FUN_00403240: read DEMO1.DAT, one byte a frame. */
+static void demo_load(Game *g)
+{
+    int n;
+
+    g->demo = 2;                        /* DAT_00464ed8 */
+    n = plat_read("demo1.dat", g->rec, (int)sizeof g->rec);
+    g->reclen = n > 0 ? n : 0;
+    g->recat = 0;
+}
+
+/* FUN_00403070: start recording into the same buffer. */
+static void demo_record(Game *g)
+{
+    memset(g->rec, 0, sizeof g->rec);
+    g->reclen = 0;
+    g->recat = 0;
+    g->demo = 1;
+}
+
+/* FUN_00403370, called before the hook in states 0x33 and 0x34: feed the
+ * recorded pad in (FUN_004032c0) or write this frame's out (FUN_004030b0). */
+static void demo_tick(Game *g)
+{
+    if (g->demo == 1) {
+        unsigned char b = 0;
+        if (g->pad & PAD_UP) b |= 1;
+        if (g->pad & PAD_DOWN) b |= 2;
+        if (g->pad & PAD_LEFT) b |= 4;
+        if (g->pad & PAD_RIGHT) b |= 8;
+        if (game_edge(g, PAD_BTN1) || game_edge(g, PAD_JOY7)) b |= 0x10;
+        if (game_edge(g, PAD_BTN2) || game_edge(g, 0x800)) b |= 0x20;
+        g->recpad = b;
+        if (g->reclen < (int)sizeof g->rec) g->rec[g->reclen++] = b;
+    } else if (g->demo == 2) {
+        if (g->recat < g->reclen) g->recpad = g->rec[g->recat++];
+    }
+}
+
+/* cases 0x32, 0x33 and 0x34: play, the attract demo, and recording one.
+ * All three are the same frame; what differs is where the pad comes from. */
+static void st_play(Game *g)
+{
+    Play *p = &g->p;
+
+    if (g->entered) {
+        g->entered = 0;
+        g->sub = 0;
+        play_clear(g);                  /* FUN_0040b250 */
+        p->score = 0;                   /* DAT_00463dcc */
+        p->loaded = 1;                  /* DAT_00461334 */
+        p->stage = 1;                   /* DAT_00463da4 */
+        p->lives = 2;                   /* DAT_00462194 */
+        p->nenemy = 10;                 /* DAT_00463dac */
+        p->demo = g->state == ST_TITLE3 ? 1 : 0;        /* DAT_0046218c */
+        if (g->state == ST_TITLE3) demo_load(g);        /* FUN_00403240 */
+        else if (g->state == ST_TITLE4) demo_record(g); /* FUN_00403070 */
+        else g->demo = 0;                               /* FUN_00403350 */
+        g->seed = 1;                    /* FUN_00426912(1) */
+    }
+    p->cycle = ((p->stage - 1) % 4) + 1;                /* DAT_00462198 */
+    if (g->state != ST_TITLE2) demo_tick(g);            /* FUN_00403370 */
+
+    switch (g->hook) {
+    case HOOK_PLAY:
+        play_frame(g);
+        break;
+    case HOOK_CLEAR:
+        /* FUN_00408210, the stage-clear pan, is not ported yet. */
+        vid_text(g->v, 0x18, 8, "STAGE CLEAR", FNT_YELLOW);
+        vid_text8_at(g->v, 0x1e, 0x16, "FUN_00408210 is not ported yet");
+        break;
+    case HOOK_OVER:
+        /* FUN_0040bdb0, the name entry, is not ported yet. */
+        vid_text(g->v, 0x1e, 8, "Game Over", FNT_RED);
+        vid_text8_at(g->v, 0x1e, 0x16, "FUN_0040bdb0 is not ported yet");
+        break;
+    }
+    /* The end of FUN_00405c10: a recorded demo that has run out goes back to
+     * the logo. */
+    if (g->reclen <= g->recat && p->demo == 1) {
+        game_set_state(g, ST_LOGO);
+        g->hook = HOOK_NONE;
+        g->hook_arg = 1;
+    }
+}
+
+/* case 0x35: save the recording and go back to the logo. */
+static void st_play_end(Game *g)
+{
+    if (g->entered) {
+        g->entered = 0;
+        g->sub = 0;
+    }
+    /* FUN_004031d0 writes DEMO1.DAT back out; the port has nowhere to put it. */
+    g->demo = 0;
+    game_set_state(g, ST_LOGO);
+}
+
 /* Not the original: a note on the screen for the states that are still to be
  * ported, so the page says which one it is sitting in. */
 static void st_todo(Game *g)
@@ -532,6 +671,10 @@ static void frame(Game *g)
     case ST_LOGO0:
     case ST_LOGO:  st_logo(g); break;
     case ST_TITLE: st_title(g); break;
+    case ST_TITLE2:
+    case ST_TITLE3:
+    case ST_TITLE4: st_play(g); break;
+    case ST_TITLE5: st_play_end(g); break;
     case ST_VERSION: st_version(g); break;
     default:       st_todo(g); break;
     }

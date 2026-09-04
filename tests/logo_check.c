@@ -36,9 +36,18 @@ void plat_bgm(int mode, const char *name)
     strncpy(bgm_last, name, sizeof bgm_last - 1);
 }
 
-void plat_se(const char *name)
+void plat_se(const char *name, int pan)
 {
     (void)name;
+    (void)pan;
+}
+
+int plat_read(const char *name, unsigned char *buf, int max)
+{
+    (void)name;
+    (void)buf;
+    (void)max;
+    return -1;
 }
 
 static void ok(int cond, const char *what)

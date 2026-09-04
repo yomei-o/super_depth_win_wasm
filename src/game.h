@@ -21,6 +21,7 @@
 #ifndef SD_GAME_H
 #define SD_GAME_H
 
+#include "play.h"
 #include "video.h"
 
 /* The states, from the switch in FUN_00401500. */
@@ -68,7 +69,10 @@ typedef struct {
 
 /* DAT_004492c8, the routine the play states call every frame.  The original
  * keeps a code pointer (one of the thunks at 0x401100); here it is an id. */
-enum { HOOK_NONE = 0, HOOK_PLAY = 1 };  /* LAB_00401168 -> FUN_00405c10 */
+enum { HOOK_NONE = 0,
+       HOOK_PLAY = 1,                   /* LAB_00401168 -> FUN_00405c10 */
+       HOOK_CLEAR = 2,                  /* LAB_00401235 -> FUN_00408210 */
+       HOOK_OVER = 3 };                 /* LAB_004011b3 -> FUN_0040bdb0 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -114,6 +118,13 @@ typedef struct {
     int quit;                           /* state 0x5a's PostQuitMessage */
 
     Rank rank[RANKS];                   /* DAT_004bf9dc */
+
+    Play p;                             /* the game itself, src/play.c */
+
+    /* the recorded demo: one byte a frame, DEMO1.DAT (FUN_00403240) */
+    unsigned char rec[10000];           /* DAT_00464ef8 */
+    int reclen, recat;                  /* DAT_0046eb38 / DAT_0046eb3c */
+    unsigned recpad;                    /* DAT_00464ee0.. spread back out */
 } Game;
 
 /* The three lines of the title menu (DAT_00441d68) and the eight staff lines
@@ -126,7 +137,11 @@ extern const char *const GAME_STAFF[8];
  * the music is the page's business. */
 int  plat_dar(Dar *d, const char *name);        /* load pic\<name> */
 void plat_bgm(int mode, const char *name);      /* FUN_00420980(mode, name) */
-void plat_se(const char *name);                 /* FUN_0041fd00(name), a WAV */
+/* FUN_0041fd00 / FUN_0041fdf0: a WAV by name, `pan` in the original's
+ * hundredths of a decibel from the middle (-10000..10000, 0 = centre). */
+void plat_se(const char *name, int pan);
+/* Read a data file whole; returns how many bytes came back, or -1. */
+int  plat_read(const char *name, unsigned char *buf, int max);
 
 void game_init(Game *g, Video *v);
 void game_set_pad(Game *g, unsigned pad);
@@ -138,5 +153,20 @@ void game_tick(Game *g);
 
 /* FUN_0042691c: the MSVC rand(), which is the only random source. */
 int  game_rand(Game *g);
+
+/* What src/play.c needs from here.  Each of the button tests burns a random
+ * number, exactly as the originals do, and reads the recorded demo instead
+ * of the pad while one is playing. */
+int  game_any_key(Game *g);             /* FUN_00402de0, BTN1 */
+int  game_start_key(Game *g);           /* FUN_00402ec0, START */
+int  game_btn2(Game *g);                /* FUN_00402e50, BTN2 */
+int  game_left(Game *g);                /* FUN_00402fd0 */
+int  game_right(Game *g);               /* FUN_00403020 */
+int  game_edge(const Game *g, unsigned bit);
+void game_set_state(Game *g, int st);   /* FUN_00421da0 */
+void game_scene(Game *g, const char *name, int count);
+
+/* src/play.c */
+void play_frame(Game *g);
 
 #endif

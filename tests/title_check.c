@@ -34,9 +34,24 @@ void plat_bgm(int mode, const char *name)
     strncpy(bgm_last, name, sizeof bgm_last - 1);
 }
 
-void plat_se(const char *name)
+void plat_se(const char *name, int pan)
 {
+    (void)pan;
     strncpy(se_last, name, sizeof se_last - 1);
+}
+
+int plat_read(const char *name, unsigned char *buf, int max)
+{
+    char path[96];
+    FILE *f;
+    int n;
+
+    sprintf(path, "disk/%s", name);
+    f = fopen(path, "rb");
+    if (!f) return -1;
+    n = (int)fread(buf, 1, (size_t)max, f);
+    fclose(f);
+    return n;
 }
 
 static void ok(int cond, const char *what)

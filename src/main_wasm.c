@@ -77,11 +77,29 @@ void plat_bgm(int mode, const char *name)
  * WAVs sitting next to the page in disk/.  The module has no way to make a
  * sound of its own, so the name is left here and the page picks it up. */
 static char g_se[64];
+static int g_se_pan;
 
-void plat_se(const char *name)
+void plat_se(const char *name, int pan)
 {
+    g_se_pan = pan;
     strncpy(g_se, name, sizeof g_se - 1);
     g_se[sizeof g_se - 1] = 0;
+}
+
+EMSCRIPTEN_KEEPALIVE int sd_se_pan(void) { return g_se_pan; }
+
+int plat_read(const char *name, unsigned char *buf, int max)
+{
+    char path[96];
+    FILE *f;
+    int n;
+
+    sprintf(path, "/disk/%s", name);
+    f = fopen(path, "rb");
+    if (!f) return -1;
+    n = (int)fread(buf, 1, (size_t)max, f);
+    fclose(f);
+    return n;
 }
 
 EMSCRIPTEN_KEEPALIVE const char *sd_se_take(void)

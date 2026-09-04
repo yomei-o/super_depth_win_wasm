@@ -25,7 +25,7 @@ public class MakeThunkFuncs extends GhidraScript {
     public void run() throws Exception {
         Memory mem = currentProgram.getMemory();
         long first = 0x401005L;         // the table's first entry
-        long last = 0x401220L;          // just past its end
+        long last = 0x40127bL;          // just past its end (the CC padding)
         int made = 0, had = 0, bad = 0;
 
         for (long a = first; a < last; a += 5) {

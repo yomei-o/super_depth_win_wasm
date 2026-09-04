@@ -5,6 +5,7 @@
  *     tmp/sd_shot.exe sheet disk/depth1.dar out.png      all of them
  *     tmp/sd_shot.exe list  disk/depth.dar               names and sizes
  *     tmp/sd_shot.exe game  disk/depth.dar out.png 30    the game, 30 frames
+ *     tmp/sd_shot.exe play  disk/depth.dar out.png 30    30 frames of play
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,9 +35,23 @@ void plat_bgm(int mode, const char *name)
     printf("bgm: mode %d %s\n", mode, name);
 }
 
-void plat_se(const char *name)
+void plat_se(const char *name, int pan)
 {
-    printf("se: %s\n", name);
+    printf("se: %s pan %d\n", name, pan);
+}
+
+int plat_read(const char *name, unsigned char *buf, int max)
+{
+    char path[96];
+    FILE *f;
+    int n;
+
+    sprintf(path, "disk/%s", name);
+    f = fopen(path, "rb");
+    if (!f) return -1;
+    n = (int)fread(buf, 1, (size_t)max, f);
+    fclose(f);
+    return n;
 }
 
 static int save(const char *path, const Gfx *g, int w, int h)
@@ -134,6 +149,33 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("%s -> %s (%d of %d patterns fitted)\n", argv[2], argv[3], i, dar.count);
+        return 0;
+    }
+    if (!strcmp(argv[1], "play")) {
+        /* Walk the state machine to the title, press the button, and run the
+         * game for a while, so a play frame can be looked at. */
+        static Video vid;
+        static Game game;
+        int frames = argc > 4 ? atoi(argv[4]) : 1, i;
+
+        vid_init(&vid, &dar);
+        game_init(&game, &vid);
+        for (i = 0; i < 400 && game.state != ST_TITLE; i++) game_tick(&game);
+        game_tick(&game);
+        game_set_pad(&game, PAD_BTN1);
+        game_tick(&game);
+        game_set_pad(&game, 0);
+        for (i = 0; i < frames; i++) game_tick(&game);
+        memcpy(gfx.px, vid.px, sizeof gfx.px);
+        memcpy(gfx.pal, vid_palette(&vid), sizeof gfx.pal);
+        if (save(argv[3], &gfx, GFX_W, GFX_H)) {
+            fprintf(stderr, "cannot write %s\n", argv[3]);
+            return 1;
+        }
+        printf("%d frames of play -> %s (state %02x hook %d, score %d, "
+               "kills %d/%d, charges %d)\n", frames, argv[3], game.state,
+               game.hook, game.p.score, game.p.kills, game.p.quota,
+               game.p.charges);
         return 0;
     }
     if (!strcmp(argv[1], "game")) {
