@@ -40,9 +40,17 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
       Bio_100% のロゴ、DEPTH のロゴ、惑星、背景まで PNG に描けた
       （`python tools/dar.py disk/staff.dar sheet.png`）
 * [ ] `stage3.bin`（"SDEPTH"）の面データ
-* [ ] WinGL（本体の描画層）の移植
-* [ ] 音（WAV は素の RIFF、BGM は SMF。ブラウザで MIDI をどう鳴らすかは未定）
-* [ ] ゲーム本体
+* [x] **描画層** — `src/video.c`。640x480 の 8bpp、パターン描画（`y + 0x20`
+      と原作のクリップつき）、原作のフォントの引きかた（`base + ASCII`）
+* [x] **BGM** — 原作の SMF を自前で合成する（`src/smf.c` / `src/synth.c` は
+      user 自身の [windepth_wasm](https://github.com/yomei-o/windepth_wasm)
+      から。同じ Bio_100% の WinDepth 用に書かれたもの）。
+      `tmp/midi2wav.exe` で 16 本とも鳴る
+* [x] **WASM とページ** — `superdepth.js` / `index.html`。いまは
+      「取り出した絵と音」の展示（文字・スプライト・パターン一覧・BGM）
+* [ ] `stage3.bin` の面データ（ヘッダと 24 バイトのレコードまで）
+* [ ] ゲーム本体（`out/superdepth.c` の 587 関数）
+* [ ] 効果音（WAV は素の RIFF なので鳴らすだけ）
 
 ## 取り出したもの（`disk/`）
 

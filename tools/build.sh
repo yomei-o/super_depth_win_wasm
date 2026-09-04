@@ -22,6 +22,10 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
 fi
 
+if [ "$what" = all ] || [ "$what" = wasm ]; then
+    sh tools/build_wasm.sh
+fi
+
 if [ "$what" = check ]; then
     echo "== checks"
     ./tmp/dar_check.exe
@@ -33,6 +37,10 @@ if [ "$what" = check ]; then
     ./tmp/sd_shot.exe text  disk/depth.dar  tmp/text.png
     echo "== music"
     ./tmp/midi2wav.exe disk/bgm01.mid tmp/bgm01.wav 10
+    if [ -f superdepth.js ]; then
+        echo "== wasm"
+        PATH="/c/prog/emsdk/emsdk/node/22.16.0_64bit/bin:$PATH"             node tests/wasm_check.js 30 tmp/wasm.png
+    fi
 fi
 
 echo "-> tmp/"
