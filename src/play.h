@@ -121,6 +121,10 @@ typedef struct {
     Splash sp[SPLASHES];
     Popup pop[POPUPS];
 
+    /* the pause menu (FUN_0040b960) */
+    int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */
+    int saved_hook;         /* DAT_004a9030, what to go back to */
+
     /* the stage-clear pan (FUN_00408210) */
     int cl_step;            /* DAT_004a84e4 */
     int cl_timer;           /* DAT_004a84ec */

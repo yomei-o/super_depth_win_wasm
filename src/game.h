@@ -73,7 +73,8 @@ enum { HOOK_NONE = 0,
        HOOK_PLAY = 1,                   /* LAB_00401168 -> FUN_00405c10 */
        HOOK_CLEAR = 2,                  /* LAB_00401235 -> FUN_00408210 */
        HOOK_OVER = 3,                   /* LAB_004011b3 -> FUN_0040bdb0 */
-       HOOK_AIR = 4 };                  /* LAB_004011ae -> FUN_0040c9e0 */
+       HOOK_AIR = 4,                    /* LAB_004011ae -> FUN_0040c9e0 */
+       HOOK_PAUSE = 5 };                /* LAB_00401041 -> FUN_0040b960 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -163,6 +164,8 @@ int  game_start_key(Game *g);           /* FUN_00402ec0, START */
 int  game_btn2(Game *g);                /* FUN_00402e50, BTN2 */
 int  game_left(Game *g);                /* FUN_00402fd0 */
 int  game_right(Game *g);               /* FUN_00403020 */
+int  game_up(Game *g);                  /* FUN_00402f30 */
+int  game_down(Game *g);                /* FUN_00402f80 */
 int  game_edge(const Game *g, unsigned bit);
 void game_set_state(Game *g, int st);   /* FUN_00421da0 */
 void game_scene(Game *g, const char *name, int count);
@@ -170,5 +173,6 @@ void game_scene(Game *g, const char *name, int count);
 /* src/play.c */
 void play_frame(Game *g);
 void play_clear_frame(Game *g);         /* FUN_00408210, the stage clear */
+void play_pause_frame(Game *g);         /* FUN_0040b960, the pause menu */
 
 #endif

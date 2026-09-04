@@ -56,6 +56,17 @@ int plat_read(const char *name, unsigned char *buf, int max)
     return n;
 }
 
+/* Press a button for one frame, with a frame's gap first so the edge is
+ * seen (WinGL copies the pad at the end of the frame). */
+static void tap(unsigned bit)
+{
+    game_set_pad(&game, 0);
+    game_tick(&game);
+    game_set_pad(&game, bit);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+}
+
 static void ok(int cond, const char *what)
 {
     if (!cond) { printf("FAIL %s\n", what); fails++; }
@@ -228,6 +239,40 @@ int main(void)
     ok(p->lives == 1, "sitting still costs a life");
     for (t = 0; t < 20000 && game.hook == HOOK_PLAY; t++) game_tick(&game);
     ok(game.hook == HOOK_OVER, "and running out of lives ends the game");
+
+    /* ESC pauses, and CONTINUE goes back in without re-arming the field. */
+    start_game();
+    p->hit = 1;
+    game_set_pad(&game, PAD_RIGHT);
+    for (t = 0; t < 10; t++) game_tick(&game);
+    game_set_pad(&game, 0);
+    x0 = p->px;
+    game_set_pad(&game, PAD_ESC);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    ok(game.hook == HOOK_PAUSE, "ESC opens the pause menu");
+    game_tick(&game);
+    {   /* PAUSE is drawn in the yellow font, which is colour 251 */
+        int x, y, n = 0;
+        for (y = 0x90 + 0x20; y < 0xa0 + 0x20; y++)
+            for (x = 0x100; x < 0x180; x++)
+                if (vid.px[y][x] == 251) n++;
+        ok(n > 100, "and says so on the screen");
+    }
+    shot("tmp/play_pause.png");
+    tap(PAD_BTN1);
+    ok(game.hook == HOOK_PLAY, "CONTINUE goes back to the game");
+    ok(p->px == x0, "with the ship where it was");
+    game_set_pad(&game, PAD_ESC);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    game_tick(&game);
+    game_set_pad(&game, PAD_DOWN);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    ok(game.p.pause_cur == 1, "DOWN picks EXIT");
+    tap(PAD_BTN1);
+    ok(game.state == ST_BOOT, "and EXIT drops out to the logo");
 
     /* The attract demo plays DEMO1.DAT back through the pad. */
     game_init(&game, &vid);

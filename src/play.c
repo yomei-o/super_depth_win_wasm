@@ -1089,10 +1089,14 @@ void play_frame(Game *g)
     play_status(g);
     p->flip ^= 1;
 
-    /* ESC or START: the original opens its pause menu (FUN_0040b930), which
-     * is not ported; in the demo they cut back to the title. */
+    /* ESC or START opens the pause menu (FUN_0040b930), except while a demo
+     * is running or being recorded, when they cut back to the title. */
     if (game_edge(g, PAD_ESC) || game_start_key(g)) {
-        if (g->demo == 1) {
+        if (g->demo == 0) {
+            p->saved_hook = g->hook;
+            g->hook = HOOK_PAUSE;
+            g->hook_arg = 1;
+        } else if (g->demo == 1) {
             game_set_state(g, ST_TITLE5);
             g->hook = HOOK_NONE;
             g->hook_arg = 1;
@@ -1200,4 +1204,50 @@ void play_clear_frame(Game *g)
     vid_text(v, 0x22, 10, "Clear!", FNT_YELLOW);
     (void)line;
     play_status(g);
+}
+
+/* FUN_0040b960: PAUSE, with CONTINUE and EXIT.  The frame is cleared before
+ * this runs, so the game does not show through - which is what the original
+ * does as well.  UP and DOWN are read held rather than edged, so the cursor
+ * runs from one to the other in two frames.
+ */
+void play_pause_frame(Game *g)
+{
+    Play *p = &g->p;
+    Video *v = g->v;
+    int n;
+
+    if (g->hook_arg) {
+        g->hook_arg = 0;
+        p->pause_cur = 0;
+    }
+
+    vid_text(v, 0x28 - (int)strlen("PAUSE"), 9, "PAUSE", FNT_YELLOW);
+    vid_text(v, 0x22, 0xc, "CONTINUE", FNT_WHITE);
+    vid_text(v, 0x22, 0xe, "EXIT", FNT_WHITE);
+    vid_text(v, 0x1e, p->pause_cur * 2 + 0xc, ">", FNT_WHITE);
+
+    if (game_up(g)) {
+        n = p->pause_cur - 1;
+        p->pause_cur = n < 0 ? 0 : (n < 2 ? n : 1);
+    }
+    if (game_down(g)) {
+        n = p->pause_cur + 1;
+        p->pause_cur = n < 0 ? 0 : (n < 2 ? n : 1);
+    }
+    if (game_any_key(g)) {
+        if (p->pause_cur == 0) {
+            g->hook = p->saved_hook;    /* back in, without re-arming */
+            g->hook_arg = 0;
+            return;
+        }
+        if (p->pause_cur == 1) {
+            game_set_state(g, ST_BOOT);
+            return;
+        }
+    }
+    if (game_edge(g, PAD_ESC) || game_start_key(g)) {
+        g->hook = p->saved_hook;
+        g->hook_arg = 0;
+    }
 }

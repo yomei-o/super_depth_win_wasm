@@ -138,6 +138,23 @@ int game_right(Game *g)
     return 0;
 }
 
+/* FUN_00402f30 and FUN_00402f80: UP and DOWN, which only the menus read. */
+int game_up(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0) return (g->pad & PAD_UP) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x01) ? 1 : 0;
+    return 0;
+}
+
+int game_down(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0) return (g->pad & PAD_DOWN) ? 1 : 0;
+    if (g->demo > 0 && g->demo < 3) return (g->recpad & 0x02) ? 1 : 0;
+    return 0;
+}
+
 /* ---- the states ------------------------------------------------------- */
 
 /* case 10: one frame of setting up. */
@@ -614,6 +631,9 @@ static void st_play(Game *g)
         break;
     case HOOK_CLEAR:
         play_clear_frame(g);
+        break;
+    case HOOK_PAUSE:
+        play_pause_frame(g);
         break;
     case HOOK_AIR:
         /* FUN_0040c9e0 - the next mode, which is the one the screenshots in

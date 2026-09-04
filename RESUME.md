@@ -301,7 +301,7 @@ Flash Bomb / Shot Special / Full Power / Ship 1up。
      新たに初期化する
    * **ゲームオーバーと名前入力** `FUN_0040bdb0`（542 行、
      `rankin = %d rcurX = %02d rcurY = %02d`）と得点表への書き込み
-   * **ポーズ画面** `FUN_0040b960`（ESC で `FUN_0040b930` が呼ぶ）
+   * ~~ポーズ画面~~ 済み（`play_pause_frame`）
    * 録画の書き出し（`FUN_004031d0`、状態 0x35）
 10. ~~効果音~~ 半分済み。名前は上の表、ページが `disk/*.wav` を
    fetch して鳴らす（`sd_se_take`）。鳴らす場所は本体の移植と一緒
