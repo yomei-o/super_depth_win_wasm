@@ -118,6 +118,12 @@ typedef struct {
      * and only the menu's 0x867 changes.  Nothing can hit the ship while it
      * is on - which is what the checks here use it for. */
     int nodie;
+    /* The registry's own three, which FUN_004026f0 reads at startup and the
+     * オプション menu toggles: Music (DAT_004bf8b0), Sound (DAT_004bf8b4)
+     * and WavePan (DAT_004bf8c4).  The defaults FUN_00402610 writes are all
+     * 1.  It is the sound layer that reads them in the original, so it is
+     * the front end that reads them here. */
+    int music_on, se_on, stereo;
 
     int logo_row[LOGO_ROWS];            /* DAT_0044653c: 1 = that row is hidden */
     int logo_left;                      /* DAT_004492b8, rows still hidden */
@@ -238,7 +244,10 @@ void staff_frame(Game *g);              /* FUN_00414210 */
 /* The debug menu's commands (the MENU resource the release build drops),
  * by the resource's own ids.  Answers non-zero when the command was one of
  * them.  See the head of src/ending.c. */
-enum { MENU_RESET = 0x860,              /* this one is in both menus */
+enum { MENU_MUSIC = 0x85d,              /* オプション, in both menus */
+       MENU_SE = 0x85e,
+       MENU_RESET = 0x860,              /* this one is in both menus */
+       MENU_STEREO = 0x864,             /* 効果音をステレオ, debug menu */
        DBG_NODIE = 0x867,               /* 死なない, off at startup */
        DBG_CHAIN = 0x86a,               /* 誘爆, on at startup */
        DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,

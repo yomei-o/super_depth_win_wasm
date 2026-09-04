@@ -17,7 +17,7 @@ EMCC="$EMSDK/upstream/emscripten/emcc.exe"
 EXPORTS=_main,_sd_init,_sd_tick,_sd_width,_sd_height,_sd_framebuffer
 EXPORTS=$EXPORTS,_sd_patterns,_sd_view,_sd_set_view,_sd_song,_sd_set_song
 EXPORTS=$EXPORTS,_sd_set_bgm,_sd_audio_init,_sd_audio,_sd_audio_left
-EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_debug,_sd_demo_ptr,_sd_demo_len,_sd_demo_stamp,_sd_state
+EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_debug,_sd_set_clock,_sd_music_on,_sd_se_on,_sd_stereo,_sd_demo_ptr,_sd_demo_len,_sd_demo_stamp,_sd_state
 EXPORTS=$EXPORTS,_sd_fps,_sd_se_take,_sd_se_pan
 EXPORTS=$EXPORTS,_sd_rank_ptr,_sd_rank_len,_sd_rank_stamp,_sd_surface
 

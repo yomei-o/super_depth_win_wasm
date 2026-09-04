@@ -141,6 +141,11 @@ function png(w, h, rgba) {
   if (fs.existsSync(want)) {
     const ref = fs.readFileSync(want);
     Module._sd_init();                          // start over from frame 0
+    // The native shot sets the clock by hand; the page reads the real one,
+    // and the "%2dFPS" in the corner counts frames inside a second - so a
+    // second turning over mid-run would change two digits and nothing else.
+    // Pin the same clock the native tool uses.
+    Module._sd_set_clock(0, 1999, 2, 14);
     for (let t = 0; t < 60; t++) Module._sd_tick();
     const sp = Module._sd_surface();
     const got = Buffer.from(Module.HEAPU8.subarray(sp, sp + w * h));

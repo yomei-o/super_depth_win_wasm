@@ -81,7 +81,8 @@ static int g_se_pan;
 
 void plat_se(const char *name, int pan)
 {
-    g_se_pan = pan;
+    if (!g_game.se_on) return;          /* DAT_004bf8b4 */
+    g_se_pan = g_game.stereo ? pan : 0; /* DAT_004bf8c4 */
     strncpy(g_se, name, sizeof g_se - 1);
     g_se[sizeof g_se - 1] = 0;
 }
@@ -216,7 +217,19 @@ EMSCRIPTEN_KEEPALIVE int sd_demo_stamp(void) { return g_demo_stamp; }
 
 /* One of the debug menu's commands - the menu the release build leaves off
  * the window.  See the head of src/ending.c for the ids. */
-EMSCRIPTEN_KEEPALIVE int sd_debug(int cmd) { return game_debug(&g_game, cmd); }
+EMSCRIPTEN_KEEPALIVE int sd_debug(int cmd)
+{
+    int was = g_game.music_on;
+    int r = game_debug(&g_game, cmd);
+
+    if (g_game.music_on != was) music_apply();
+    return r;
+}
+
+/* The three the オプション menu owns, for the page to show. */
+EMSCRIPTEN_KEEPALIVE int sd_music_on(void) { return g_game.music_on; }
+EMSCRIPTEN_KEEPALIVE int sd_se_on(void) { return g_game.se_on; }
+EMSCRIPTEN_KEEPALIVE int sd_stereo(void) { return g_game.stereo; }
 
 /* The score table, so the page can keep it: ten records of 40 bytes, laid
  * out exactly as the original writes them into the registry. */
@@ -234,18 +247,41 @@ EMSCRIPTEN_KEEPALIVE void sd_set_view(int n)
     if (g_view == 0) music_apply();     /* back to whatever the game wants */
 }
 
+/* The native tools set the clock by hand (game_set_second / game_set_date)
+ * while the page reads the real one, and the "%2dFPS" in the corner counts
+ * the frames inside one second - so a second turning over mid-run changes
+ * two digits.  tests/wasm_check.js pins the clock with this to compare the
+ * two builds byte for byte. */
+static int g_clock_fixed, g_fixed_second, g_fixed_y, g_fixed_m, g_fixed_d;
+
+EMSCRIPTEN_KEEPALIVE void sd_set_clock(int second, int y, int m, int d)
+{
+    g_clock_fixed = 1;
+    g_fixed_second = second;
+    g_fixed_y = y;
+    g_fixed_m = m;
+    g_fixed_d = d;
+    game_set_second(&g_game, second);
+    game_set_date(&g_game, y, m, d);
+}
+
 EMSCRIPTEN_KEEPALIVE void sd_tick(void)
 {
     if (!g_ready) return;
     if (g_view == 0) {
-        time_t t = time(NULL);
-        struct tm *lt = localtime(&t);
-        /* GetLocalTime: the second drives the FPS counter and the date
-         * is what a high score is stamped with. */
-        game_set_second(&g_game, lt ? lt->tm_sec : 0);
-        if (lt)
-            game_set_date(&g_game, lt->tm_year + 1900, lt->tm_mon + 1,
-                          lt->tm_mday);
+        if (g_clock_fixed) {
+            game_set_second(&g_game, g_fixed_second);
+            game_set_date(&g_game, g_fixed_y, g_fixed_m, g_fixed_d);
+        } else {
+            time_t t = time(NULL);
+            struct tm *lt = localtime(&t);
+            /* GetLocalTime: the second drives the FPS counter and the date
+             * is what a high score is stamped with. */
+            game_set_second(&g_game, lt ? lt->tm_sec : 0);
+            if (lt)
+                game_set_date(&g_game, lt->tm_year + 1900, lt->tm_mon + 1,
+                              lt->tm_mday);
+        }
         game_tick(&g_game);
     } else {
         draw_view();
@@ -260,7 +296,7 @@ static void music_apply(void)
     char path[96];
 
     mus_stop(&g_mus);
-    if (!g_bgm_on) return;
+    if (!g_bgm_on || !g_game.music_on) return;      /* DAT_004bf8b0 */
     if (g_view == 0) {
         if (!g_bgm[0]) return;
         sprintf(path, "/disk/%s.mid", g_bgm);
