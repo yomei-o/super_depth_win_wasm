@@ -31,7 +31,9 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
 fi
 
-if [ "$what" = all ] || [ "$what" = wasm ]; then
+# `check` builds the wasm too: the last check compares it with the native
+# build byte for byte, and comparing a stale one proves nothing.
+if [ "$what" = all ] || [ "$what" = wasm ] || [ "$what" = check ]; then
     sh tools/build_wasm.sh
 fi
 
