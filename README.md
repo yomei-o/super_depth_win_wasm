@@ -15,6 +15,16 @@ Copyright(C)1998-1999 Bio_100% Inc.
 
 **遊べます: https://yomei-o.github.io/super_depth_win_wasm/**
 
+| | | | |
+|---|---|---|---|
+| ![タイトル](docs/shots/title.png) | ![海の面](docs/shots/sea.png) | ![空の面](docs/shots/air.png) | ![宇宙の面](docs/shots/space.png) |
+| タイトル | 海の面 | 空の面 | 宇宙の面 |
+| ![大物の面](docs/shots/boss.png) | ![エンディング](docs/shots/ending.png) | ![CAST](docs/shots/cast.png) | ![スタッフロール](docs/shots/staff.png) |
+| 大物の面 | エンディング | CAST | スタッフロール |
+
+海・空・宇宙の 3 枚は**原作の録画（`disk/demo1.dat`）を再生して撮った**
+もの（`tmp/sd_shot.exe demo`）。原作の入力そのままで動いている画面。
+
 海の面は <kbd>←</kbd><kbd>→</kbd> で艦を動かし、<kbd>Z</kbd> で船首側、
 <kbd>X</kbd> で船尾側に爆雷を落とす。空と宇宙では上下にも動き、
 <kbd>Z</kbd> と <kbd>X</kbd> が別々の向きの弾になる。<kbd>Esc</kbd> で
@@ -141,6 +151,8 @@ tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ
 ```
 python tools/unpack.py                      インストーラから disk/ を作る
 python tools/globals.py FUN_0040f970        その関数が触る global を移植側と突き合わせる
+python tools/menu.py                        実行ファイルの資源からメニューを読む（UTF-8 で保存して読むこと）
+python tools/repng.py tmp/a.png docs/b.png  検査が吐いた PNG を zlib で詰め直す（308KB → 数 KB）
 sh tools/cc.sh -O2 -Itools -o tmp/unlib.exe tools/unlib.c tools/blast.c
 ```
 
