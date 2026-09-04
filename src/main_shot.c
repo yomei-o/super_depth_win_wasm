@@ -11,6 +11,7 @@
 
 #include "dar.h"
 #include "gfx.h"
+#include "video.h"
 #include "png.h"
 
 static Dar dar;
@@ -30,7 +31,7 @@ int main(int argc, char **argv)
     int rc;
 
     if (argc < 3) {
-        fprintf(stderr, "usage: sd_shot pat|sheet|list <file.dar> [out.png] [n]\n");
+        fprintf(stderr, "usage: sd_shot pat|sheet|list|text <file.dar> [out.png] [n]\n");
         return 2;
     }
     rc = dar_load(&dar, argv[2]);
@@ -62,6 +63,36 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("%s #%d %s %dx%d -> %s\n", argv[2], n, p->name, p->w, p->h, argv[3]);
+        return 0;
+    }
+    if (!strcmp(argv[1], "text")) {
+        /* What the game itself prints, in its own fonts and at its own
+         * coordinates: FUN_0040a8e0 draws "Ready" at (0x24, 10) with base
+         * 0x280 = fntred, FUN_0040a840 "Stage" at (0x20, 10), and
+         * FUN_004093d0 the score line at row 0x168 in pixels. */
+        static Video vid;
+        vid_init(&vid, &dar);
+        vid_clear(&vid, 0);
+        vid_text(&vid, 0x24, 10, "Ready", FNT_RED);
+        vid_text(&vid, 0x20, 12, "Stage 3", FNT_YELLOW);
+        vid_text(&vid, 0x1c, 14, "DEMONSTRATION", FNT_CYAN);
+        vid_text(&vid, 0x1e, 16, "Game Over", FNT_MAG);
+        vid_text_at(&vid, 10, 0x168, "Score", FNT_WHITE);
+        vid_text_at(&vid, 0x3c, 0x168, "000000", FNT_GREEN);
+        vid_text8(&vid, 8, 8, "the 8x8 font: 0123456789 ABCDEFGHIJKLM");
+        vid_text8(&vid, 8, 20, "nopqrstuvwxyz !\"#$%&'()*+,-./:;<=>?@");
+        {   /* a row of the 16x16 sprites, and the 128x96 boss */
+            int i;
+            for (i = 0; i < 24; i++) vid_pat(&vid, 16 + i * 20, 240, 2433 + i);
+            for (i = 0; i < 8; i++) vid_pat(&vid, 16 + i * 40, 280, 2505 + i);
+            vid_pat(&vid, 460, 260, 2861);
+        }
+        memcpy(gfx.px, vid.px, sizeof gfx.px);
+        if (save(argv[3], &gfx, GFX_W, GFX_H)) {
+            fprintf(stderr, "cannot write %s\n", argv[3]);
+            return 1;
+        }
+        printf("%s -> %s (the game's own fonts and sprites)\n", argv[2], argv[3]);
         return 0;
     }
     if (!strcmp(argv[1], "sheet")) {
