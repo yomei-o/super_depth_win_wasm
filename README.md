@@ -139,6 +139,7 @@ tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ
 
 ```
 python tools/unpack.py                      インストーラから disk/ を作る
+python tools/globals.py FUN_0040f970        その関数が触る global を移植側と突き合わせる
 sh tools/cc.sh -O2 -Itools -o tmp/unlib.exe tools/unlib.c tools/blast.c
 ```
 
