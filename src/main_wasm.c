@@ -301,7 +301,11 @@ static void music_apply(void)
         if (!g_bgm[0]) return;
         sprintf(path, "/disk/%s.mid", g_bgm);
         if (mus_load_file(&g_mus, path) == 0)
-            mus_play(&g_mus, g_bgm_mode == 0 ? 0 : 1);
+            /* FUN_00420090's own jump table (index bytes at 0x420814, the
+             * addresses at 0x420800, and the debug string each arm prints):
+             * 0 and 2 are MIDIPLAY_ONCE, 1 and 3 MIDIPLAY_REPEAT, 4 STOP,
+             * 100 DRIVER_CLOSE, everything else nothing at all. */
+            mus_play(&g_mus, (g_bgm_mode == 0 || g_bgm_mode == 2) ? 0 : 1);
         return;
     }
     sprintf(path, "/disk/bgm%02d.mid", g_song);
