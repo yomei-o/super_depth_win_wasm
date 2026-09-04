@@ -48,7 +48,7 @@ def load(path):
     if ver > 1:
         raise SystemExit('%s is version %d' % (path, ver))
     count = struct.unpack_from('<H', d, 6)[0]
-    pal = [tuple(d[0x10 + i * 4 + k] for k in (2, 1, 0)) for i in range(256)]
+    pal = [tuple(d[0x0c + i * 4 + k] for k in (2, 1, 0)) for i in range(256)]
 
     pats = []
     at = 0x40c
@@ -95,7 +95,8 @@ def rows(d, pat):
     out = []
     for y in range(h):
         px = [None] * w
-        q = at + y * stride
+        # bottom-up, like a Windows DIB: stored row 0 is the last line
+        q = at + (h - 1 - y) * stride
         end = q + stride
         x = 0
         while x < w and q + 4 <= end:
@@ -103,6 +104,8 @@ def rows(d, pat):
             q += 4
             x += pair & 0xffff                    # the transparent run
             run = pair >> 16
+            if run == 0:
+                break                             # a zero run ends the row
             for i in range(run):
                 if 0 <= x < w and q + i < len(d):
                     px[x] = d[q + i]

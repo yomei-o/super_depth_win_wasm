@@ -39,10 +39,12 @@ int dar_load(Dar *d, const char *path)
     if (d->data[5] > 1) return -3;                       /* FUN_00419700 */
     d->count = (int)word(d->data + 6);
 
+    /* The colour table starts at 0x0c - 0x0c + 256 * 4 = 0x40c, where the
+     * patterns begin - and is stored the way a DIB stores one, blue first. */
     for (i = 0; i < 256; i++) {
-        d->pal[i][0] = d->data[0x10 + i * 4 + 2];        /* RGBQUAD: b g r x */
-        d->pal[i][1] = d->data[0x10 + i * 4 + 1];
-        d->pal[i][2] = d->data[0x10 + i * 4 + 0];
+        d->pal[i][0] = d->data[0x0c + i * 4 + 2];
+        d->pal[i][1] = d->data[0x0c + i * 4 + 1];
+        d->pal[i][2] = d->data[0x0c + i * 4 + 0];
     }
 
     at = 0x40c;
@@ -105,7 +107,12 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
     if (n < 0 || n >= d->count) return -1;
     p = &d->pat[n];
     for (y = 0; y < p->h; y++) {
-        const unsigned char *q = d->data + p->at + (long)y * p->stride;
+        /* The rows are stored bottom-up, the way a Windows DIB is: stored row
+         * 0 is the picture's last line.  Read them in the other order and
+         * every pattern comes out upside down - which is easy to miss on a
+         * logo and impossible to miss on the font. */
+        const unsigned char *q = d->data + p->at +
+                                 (long)(p->h - 1 - y) * p->stride;
         const unsigned char *end = q + p->stride;
         int ty = y0 + y;
         int x = 0;
@@ -118,6 +125,7 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
 
             q += 4;
             x += clear;
+            if (run == 0) break;                /* a zero run ends the row */
             for (i = 0; i < run; i++, x++) {
                 int tx = x0 + x;
                 if (x >= p->w) break;
