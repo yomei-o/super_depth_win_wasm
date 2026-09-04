@@ -608,10 +608,15 @@ static void st_play(Game *g)
         play_pause_frame(g);
         break;
     case HOOK_AIR:
-        /* FUN_0040c9e0 - the next mode, which is the one the screenshots in
-         * disk/depth3.jpg and depth4.jpg show - is not ported yet. */
+        air_frame(g);
+        break;
+    case HOOK_AIRCLEAR:
+        air_clear_frame(g);
+        break;
+    case HOOK_SPACE:
+        /* FUN_0040f970, the third kind of stage, is not ported yet. */
         vid_text(g->v, 0x1a, 8, "Stage Clear", FNT_YELLOW);
-        vid_text8_at(g->v, 0x1c, 0x16, "FUN_0040c9e0 is not ported yet");
+        vid_text8_at(g->v, 0x1c, 0x16, "FUN_0040f970 is not ported yet");
         break;
     case HOOK_OVER:
         play_over_frame(g);

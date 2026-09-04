@@ -74,7 +74,9 @@ enum { HOOK_NONE = 0,
        HOOK_CLEAR = 2,                  /* LAB_00401235 -> FUN_00408210 */
        HOOK_OVER = 3,                   /* LAB_004011b3 -> FUN_0040bdb0 */
        HOOK_AIR = 4,                    /* LAB_004011ae -> FUN_0040c9e0 */
-       HOOK_PAUSE = 5 };                /* LAB_00401041 -> FUN_0040b960 */
+       HOOK_PAUSE = 5,                  /* LAB_00401041 -> FUN_0040b960 */
+       HOOK_AIRCLEAR = 6,               /* LAB_004010d2 -> FUN_0040f490 */
+       HOOK_SPACE = 7 };                /* LAB_0040110e -> FUN_0040f970 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -186,5 +188,18 @@ void play_over_frame(Game *g);          /* FUN_0040bdb0, the name entry */
 void play_rank_row_of(Game *g, int rank, int score, int stage,
                       const char *name, const char *date, int bank);
 void play_rank_row(Game *g, int rank);
+
+/* What src/air.c borrows from src/play.c: the pieces both stages share. */
+void play_field_build(Game *g);         /* FUN_0040aa20 */
+void play_enemy_hit(Game *g, int i, int chain);         /* FUN_0040acf0 */
+void play_item_pick(Game *g);           /* FUN_0040aed0 */
+void play_item_apply(Play *p);          /* FUN_0040aab0 */
+void play_item_name(Game *g, int x, int y, int kind);   /* FUN_0040b1c0 */
+void play_boom(Video *v, int x, int y, int frame);      /* FUN_0040ae50 */
+void play_status_bar(Game *g);          /* FUN_004093d0 */
+
+/* src/air.c */
+void air_frame(Game *g);                /* FUN_0040c9e0, the stage after one */
+void air_clear_frame(Game *g);          /* FUN_0040f490, its own clear */
 
 #endif

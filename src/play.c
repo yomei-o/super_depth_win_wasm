@@ -41,10 +41,6 @@ static const int SHIP_FRAME[5] = { 5, 13, 21, 29, 37 };
 static const int ITEM_ROLL[16] = { 1,1,1,1, 2,2,2,2, 3,3, 4,4, 5,5, 6, 7 };
 
 /* 0x44010c, 0x20 bytes apiece: what the pickup calls itself. */
-static const char *const ITEM_NAME[8] = {
-    "EMPTY", "Speed Up", "Shot Max Up", "Shot Power Up",
-    "Flash Bomb", "Shot Special", "Full Power", "Ship 1up"
-};
 
 /* 0x43fae8: 0x40 bytes a stage, and the loader reads 64 of them from there -
  * so the rows overlap and a stage's own ten are the first ten of its row.
@@ -142,8 +138,30 @@ static void charge_drop(Play *p, int x, int y)
     se_at("drop", p->px + 0x20);
 }
 
+static const char *const ITEM_NAME[8] = {
+    "EMPTY", "Speed Up", "Shot Max Up", "Shot Power Up",
+    "Flash Bomb", "Shot Special", "Full Power", "Ship 1up"
+};
+
+/* FUN_0040b1c0: the item's name in the small font, kept on the screen.  The
+ * y is in surface coordinates - the caller adds the 0x20. */
+void play_item_name(Game *g, int x, int y, int kind)
+{
+    const char *name = ITEM_NAME[kind & 7];
+    int len = (int)strlen(name);
+    int at = x + (2 - len) * 4;
+
+    if (at < 0x20) {
+        at = 0x20;
+    } else {
+        int cap = (0x4c - len) * 8;
+        if (cap < at) at = cap;
+    }
+    vid_text8(g->v, at, y + 0x20, name);
+}
+
 /* FUN_0040ae50: eight frames of explosion from 0xa35. */
-static void boom(Video *v, int x, int y, int frame)
+void play_boom(Video *v, int x, int y, int frame)
 {
     if (frame < 8) vid_pat(v, x, y, frame + 0xa35);
 }
@@ -151,7 +169,7 @@ static void boom(Video *v, int x, int y, int frame)
 /* FUN_0040aed0: which item to drop.  The die is loaded by everything the
  * player already has - there is no point dropping a speed-up on a ship that
  * is already at full speed. */
-static void item_pick(Game *g)
+void play_item_pick(Game *g)
 {
     Play *p = &g->p;
 
@@ -175,7 +193,7 @@ done:
 }
 
 /* FUN_0040aab0: what picking one up does. */
-static void item_apply(Play *p)
+void play_item_apply(Play *p)
 {
     switch (p->item) {
     case 1:
@@ -252,7 +270,7 @@ static void popups_draw(Game *g)
  * drifts), the death animation starts, the score goes up by the kind's worth
  * times the chain, and a popup says so.  The popup itself is not ported yet;
  * the score is. */
-static void enemy_hit(Game *g, int i, int chain)
+void play_enemy_hit(Game *g, int i, int chain)
 {
     Play *p = &g->p;
     Enemy *e = &p->e[i];
@@ -270,7 +288,7 @@ static void enemy_hit(Game *g, int i, int chain)
 }
 
 /* FUN_0040aa20: build the field for a stage out of the kind table. */
-static void field_build(Game *g)
+void play_field_build(Game *g)
 {
     Play *p = &g->p;
     int i;
@@ -320,7 +338,7 @@ static void field_reinit(Game *g)
     for (i = 0; i < TORPS; i++) p->t[i].y = 0x20;
     for (i = 0; i < ESHOTS; i++) { p->s[i].y = -0x10; p->s[i].vx = 0; }
     for (i = 0; i < SPLASHES; i++) p->sp[i].frame = 4;
-    field_build(g);
+    play_field_build(g);
     p->px = 0x120;
     p->py = 0x10;
     p->inflight = 0;
@@ -678,7 +696,7 @@ static void sonar_enemies(Game *g)
  * the sea bed either side of it, Score on the left and Left on the right.
  * The three "strings" at 0x43fac4 are box-drawing glyphs out of the 16x16
  * font, which is how the panel's frame is drawn. */
-static void play_status(Game *g)
+void play_status_bar(Game *g)
 {
     Play *p = &g->p;
     Video *v = g->v;
@@ -830,14 +848,14 @@ void play_frame(Game *g)
                 if (a->y < top || a->y > b->y + 0x18) continue;
                 if (b->kind == EK_HOMING && p->item == 0 &&
                     b->x > 0x1f && b->x < 0x241) {
-                    item_pick(g);
+                    play_item_pick(g);
                     p->itemx = b->x + 8;
                     p->itemy = b->y + 8;
                     p->itemk = 0;
                     p->itemvy = -2;
                     p->itemt = -1;
                 }
-                enemy_hit(g, j, a->chain + 1);
+                play_enemy_hit(g, j, a->chain + 1);
                 p->kills++;
             }
         }
@@ -878,14 +896,14 @@ void play_frame(Game *g)
             if (c->y < top || c->y > e->y + 0x18) continue;
             if (e->kind == EK_HOMING && p->item == 0 &&
                 e->x > 0x1f && e->x < 0x241) {
-                item_pick(g);
+                play_item_pick(g);
                 p->itemk = 0;
                 p->itemx = e->x + 8;
                 p->itemvy = -2;
                 p->itemy = e->y + 8;
                 p->itemt = -1;
             }
-            enemy_hit(g, j, 1);
+            play_enemy_hit(g, j, 1);
             p->kills++;
             charge_free(p, k);
         }
@@ -959,7 +977,7 @@ void play_frame(Game *g)
                     Enemy *e = &p->e[j];
                     if (e->state == 10 && e->y != 0 && e->x > 0 && e->x < 0x240) {
                         p->kills++;
-                        enemy_hit(g, j, 1);
+                        play_enemy_hit(g, j, 1);
                     }
                 }
                 for (j = 0; j < CHARGES; j++) {
@@ -980,7 +998,7 @@ void play_frame(Game *g)
                 p->neshot = 0;
                 plat_se("burn", 0);
             } else {
-                item_apply(p);
+                play_item_apply(p);
             }
             p->item = 0;
             plat_se("item", 0);
@@ -1050,10 +1068,10 @@ void play_frame(Game *g)
         if (e->state < 10) {
             switch (e->kind) {
             case 1: case 2: case 4: case 5:
-                boom(v, e->x, e->y - 0x10, 9 - e->state);
+                play_boom(v, e->x, e->y - 0x10, 9 - e->state);
                 break;
             case 3: case 9:
-                boom(v, e->x - 0x10, e->y - 0x10, 9 - e->state);
+                play_boom(v, e->x - 0x10, e->y - 0x10, 9 - e->state);
                 break;
             }
         } else {
@@ -1090,7 +1108,7 @@ void play_frame(Game *g)
     for (i = 0; i < p->charges; i++)    /* FUN_00405af0 */
         if (p->c[i].y != 0x134)
             vid_pat(v, p->c[i].x, p->c[i].y, p->cframe + 0x981);
-    if (p->life < 10) boom(v, p->px, p->py - 0x10, 9 - p->life);
+    if (p->life < 10) play_boom(v, p->px, p->py - 0x10, 9 - p->life);
     else vid_pat(v, p->px, p->swell + p->py, 0xa05);
     for (i = 0, n = 0x28; i < p->charges - p->inflight; i++, n += 2)
         vid_pat(v, (n - p->charges) * 8, 4, p->cframe + 0x981);
@@ -1100,21 +1118,9 @@ void play_frame(Game *g)
         if (p->itemt > 0x2d || p->itemt < 1 || p->flip != 0) {
             /* the swell only lifts it once it has reached the surface */
             int lift = p->itemy < 0x21 ? p->swell : 0;
-            const char *name = ITEM_NAME[p->item & 7];
-            int len = (int)strlen(name);
-            int at = p->itemx + (2 - len) * 4;
 
             vid_pat(v, p->itemx, p->itemy + lift, p->item + 0x989);
-            /* FUN_0040b1c0: the name in the small font, kept on the screen.
-             * Its y is already in surface coordinates - the caller adds the
-             * 0x20 itself. */
-            if (at < 0x20) {
-                at = 0x20;
-            } else {
-                int cap = (0x4c - len) * 8;
-                if (cap < at) at = cap;
-            }
-            vid_text8(v, at, p->itemy - 8 + lift + 0x20, name);
+            play_item_name(g, p->itemx, p->itemy - 8 + lift, p->item);
         }
     }
     if (p->item == 0 && p->onscreen == 0 && p->quota <= p->kills &&
@@ -1123,7 +1129,7 @@ void play_frame(Game *g)
         g->hook_arg = 1;
     }
 
-    play_status(g);
+    play_status_bar(g);
     p->flip ^= 1;
 
     /* ESC or START opens the pause menu (FUN_0040b930), except while a demo
@@ -1240,7 +1246,7 @@ void play_clear_frame(Game *g)
         }
     vid_text(v, 0x22, 10, "Clear!", FNT_YELLOW);
     (void)line;
-    play_status(g);
+    play_status_bar(g);
 }
 
 /* FUN_0040b960: PAUSE, with CONTINUE and EXIT.  The frame is cleared before

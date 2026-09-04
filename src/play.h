@@ -74,6 +74,18 @@ typedef struct {            /* DAT_004a8548, 5 ints, 64 of them */
 
 typedef struct { int x, y, vx, kind; } Star;  /* DAT_004a9110, 256 of them */
 
+/* The air stage (src/air.c).  The ship shoots upward and the aircraft drop
+ * two kinds of bomb; the arrays are the same 28-int records again. */
+typedef struct { int x, y, dx; } UpShot;    /* DAT_00461358, y < -0xf free */
+typedef struct { int x, y, vy; } Bomb;      /* DAT_00461a70, y >= 0x160 free */
+typedef struct { int x, y, vx, vy; } ABomb; /* DAT_00463dd8, y >= 0x160 free */
+typedef struct { int x, y, kind; } Cloud;   /* DAT_004a8a58, 4 ints, the rain */
+
+#define UPSHOTS 16
+#define BOMBS   16
+#define ABOMBS  16
+#define CLOUDS  64
+
 #define STARS 256
 
 typedef struct {
@@ -135,6 +147,17 @@ typedef struct {
     int nnames, pickname;   /* DAT_004a9040 / DAT_004a904c, the DUP list */
     char names[16][16];     /* DAT_004a9064 */
     Star star[STARS];
+
+    /* the air stage */
+    UpShot up[UPSHOTS];
+    Bomb bomb[BOMBS];
+    ABomb ab[ABOMBS];
+    int nbomb, nab;         /* DAT_004b18c0 / DAT_004b18b8 */
+    int wob2;               /* DAT_004b18bc, the air stage's own 0/1 */
+    Cloud cloud[CLOUDS];
+    int ncloud;             /* DAT_004b18d0 */
+    int ac_timer;           /* DAT_004b18c8 */
+    int ac_scroll;          /* DAT_004b18cc */
 
     /* the pause menu (FUN_0040b960) */
     int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */
