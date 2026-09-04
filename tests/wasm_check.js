@@ -160,6 +160,28 @@ function png(w, h, rgba) {
     console.log('(no ' + want + ', skipping the native comparison)');
   }
 
+  // Every stage has to start inside the module, not just in the native
+  // build: the native tools read disk/ off the filesystem, the page only has
+  // what --embed-file put in.  disk/stage3.bin was missing once, and the
+  // space stage gave up and dropped back to the title (state 0x1e) exactly
+  // as FUN_0040f970 does when it cannot read its script.
+  Module._sd_init();
+  Module._sd_debug(0x86e);                      // to the title
+  Module._sd_tick();
+  Module._sd_set_pad(0x0010);                   // Game Start, so the stage
+  Module._sd_tick();                            // select is allowed (it only
+  Module._sd_set_pad(0);                        // answers in 0x32/0x33/0x34)
+  Module._sd_tick();
+  ok(Module._sd_state() === 0x32, 'the button starts a game in the module');
+  for (const [cmd, name, hook] of [[0x84e, 'sea', 1], [0x84f, 'air', 4],
+                                   [0x850, 'space', 7], [0x851, 'boss', 8]]) {
+    Module._sd_debug(cmd);
+    Module._sd_tick();
+    Module._sd_tick();
+    ok(Module._sd_state() === 0x32, 'the ' + name + ' stage stays in 0x32 (' +
+       Module._sd_state().toString(16) + ')');
+  }
+
   // The debug menu's commands go through the same export the page's
   // buttons use, and the page's own script has to parse.
   Module._sd_init();

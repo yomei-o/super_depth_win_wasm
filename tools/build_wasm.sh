@@ -23,12 +23,16 @@ EXPORTS=$EXPORTS,_sd_rank_ptr,_sd_rank_len,_sd_rank_stamp,_sd_surface
 
 EMBED="--embed-file disk/depth.dar@/disk/depth.dar"
 EMBED="$EMBED --embed-file disk/demo1.dat@/disk/demo1.dat"
+# the space stage reads this every time it starts; without it
+# FUN_0040f970 gives up and drops back to the title
+EMBED="$EMBED --embed-file disk/stage3.bin@/disk/stage3.bin"
 for n in staff depth1 depth2 space ending; do
     EMBED="$EMBED --embed-file disk/$n.dar@/disk/$n.dar"
 done
 for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
     EMBED="$EMBED --embed-file disk/bgm$n.mid@/disk/bgm$n.mid"
 done
+EMBED="$EMBED --embed-file disk/finst1.mid@/disk/finst1.mid"   # the staff roll
 
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \

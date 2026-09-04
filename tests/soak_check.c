@@ -56,9 +56,14 @@ void plat_write(const char *name, const unsigned char *buf, int n)
 }
 
 
+/* The state a failure happened in, so a soak of half a million frames says
+ * where to look rather than just that something went wrong. */
 static void bad(const char *what, int frame, int v)
 {
-    if (fails < 20) printf("FAIL %s at frame %d (%d)\n", what, frame, v);
+    if (fails < 20)
+        printf("FAIL %s at frame %d (%d)  state %02x hook %d stage %d "
+               "life %d lives %d\n", what, frame, v, game.state, game.hook,
+               game.p.stage, game.p.life, game.p.lives);
     fails++;
 }
 

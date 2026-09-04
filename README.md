@@ -137,7 +137,7 @@ tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ
 |---|---|
 | `superdepth.exe` | 344064 バイト。本体 |
 | `depth.dar` | 1335036。パターン 2887 枚 |
-| `depth1.dar` / `depth2.dar` | 132072 ずつ。海と空のタイル |
+| `depth1.dar` / `depth2.dar` | 132072 ずつ。海と空のタイル。**`depth2.dar` は名前が binary 中で一度も参照されない**（0x443d38 に文字列だけある）ので、実際には読まれない |
 | `space.dar` / `ending.dar` / `staff.dar` | 星雲・地球・Bio_100% のロゴ |
 | `stage3.bin` | 6632。"SDEPTH" で始まる **3 面（宇宙）の台本**。`FUN_00413df0` が読む |
 | `bgm01`..`bgm15.mid`, `finst1.mid` | BGM（SMF）。`finst1` はスタッフロール。表にある `finend2` だけ入っていない |
