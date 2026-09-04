@@ -306,7 +306,7 @@ void air_frame(Game *g)
     if (g->hook_arg) {
         g->hook_arg = 0;
         play_field_build(g);            /* FUN_0040aa20 */
-        p->announce = 0;                /* FUN_0040a9f0 */
+        play_clear_banners(g);          /* FUN_0040a9f0 */
         p->over = 0;
         p->banner = 0;
         game_scene(g, "depth1.dar", 9);
@@ -640,7 +640,7 @@ void air_frame(Game *g)
             g->hook = HOOK_PAUSE;
             g->hook_arg = 1;
         } else if (g->demo == 1) {
-            game_set_state(g, ST_TITLE5);
+            game_set_state(g, ST_PLAY_END);
             g->hook = HOOK_NONE;
             g->hook_arg = 1;
         } else if (g->demo == 2) {

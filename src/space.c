@@ -731,9 +731,9 @@ void space_frame(Game *g)
             p->life = 10;
             p->px = 0x40;
             for (i = 0; i < STARS2; i++) {
-                p->star2[i].x = game_rand(g) % 0x280;
-                p->star2[i].y = game_rand(g) % 0x160;
-                p->star2[i].kind = game_rand(g) % 6;
+                p->cloud[i].x = game_rand(g) % 0x280;
+                p->cloud[i].y = game_rand(g) % 0x160;
+                p->cloud[i].kind = game_rand(g) % 6;
             }
             p->banner = 0x96;
         } else {
@@ -1001,7 +1001,7 @@ void space_frame(Game *g)
     if (g->frame % 8 == 0 && p->drift_x > -8) p->drift_x--;
     if (p->drift_x != 0 || p->drift_y != 0)
         for (i = 0; i < STARS2; i++) {
-            Star2 *st = &p->star2[i];
+            Cloud *st = &p->cloud[i];
             st->x += p->drift_x;
             st->y += p->drift_y;
             if (p->drift_x != 0)
@@ -1031,7 +1031,7 @@ void space_frame(Game *g)
         vid_pat_wave(v, p->spacex[i], p->spacey[i], EXT_BASE + 48 + i,
                      -0x100, 0x10, (int)g->frame);
     for (i = 0; i < STARS2; i++)
-        vid_pat(v, p->star2[i].x, p->star2[i].y, p->star2[i].kind + 0xb30);
+        vid_pat(v, p->cloud[i].x, p->cloud[i].y, p->cloud[i].kind + 0xb30);
 
     /* --- the enemies, in two passes so the big things layer -------------- */
     for (pass = 0; pass < 2; pass++)
@@ -1222,7 +1222,7 @@ void space_frame(Game *g)
             g->hook = HOOK_PAUSE;
             g->hook_arg = 1;
         } else if (g->demo == 1) {
-            game_set_state(g, ST_TITLE5);
+            game_set_state(g, ST_PLAY_END);
             g->hook = HOOK_NONE;
             g->hook_arg = 1;
         } else if (g->demo == 2) {

@@ -298,6 +298,25 @@ void play_enemy_hit(Game *g, int i, int chain)
         popup_add(p, e->w / 2 + e->x, e->h / 2 + e->y, worth * 10, chain);
 }
 
+/* FUN_0040a9f0: the banners off and the score popups gone, which every
+ * screen does as it starts.  It also clears DAT_004a8538, the 90-frame
+ * item-name banner FUN_0040a540 arms - nothing in this build draws that. */
+void play_clear_banners(Game *g)
+{
+    Play *p = &g->p;
+    int i;
+
+    p->announce = 0;
+    p->over = 0;
+    p->banner = 0;
+    for (i = 0; i < POPUPS; i++) {      /* FUN_0040b690 */
+        p->pop[i].t = 0;
+        p->pop[i].value = 0;
+        p->pop[i].x = 0;
+        p->pop[i].y = 0;
+    }
+}
+
 /* FUN_0040aa20: build the field for a stage out of the kind table. */
 void play_field_build(Game *g)
 {
@@ -330,9 +349,7 @@ static void field_reinit(Game *g)
     Play *p = &g->p;
     int i;
 
-    p->announce = 0;                    /* FUN_0040a9f0 */
-    p->over = 0;
-    p->banner = 0;
+    play_clear_banners(g);              /* FUN_0040a9f0 */
     for (i = 0; i < ENEMIES; i++) {     /* FUN_0040ac70 -> FUN_0040abe0 */
         p->e[i].kind = 0;
         p->e[i].x = 0;
@@ -663,44 +680,121 @@ static void sonar_player(Game *g)
 {
     Play *p = &g->p;
 
-    if (p->life > 9 && p->py >= 0) {
+    if (g->hook == HOOK_END || (p->life > 9 && p->py >= 0)) {
         int sx = p->px / 8 + 0x118, sy = p->py / 8 + 0x16a;
         vid_pat(g->v, sx, sy, 0xb40);
         vid_pat(g->v, sx + 4, sy, 0xb40);
     }
 }
 
-/* FUN_004097a0: one blip a kind, two of them for the wide ones.  Kind 9
- * flickers - it is only drawn on the odd frames. */
+/* FUN_004097a0: the blips.  The original has one whole branch a hook, and
+ * they do not agree: the sea stage wants y over 0xf, the air stage anything
+ * from -0x1f down, the space stage its own set of kinds, the boss a block
+ * four wide and three deep, and the ending a single 0xb48 for the earth.
+ * The kinds that take two blips are the wide ones. */
+static void blip(Game *g, int x, int y, int pat, int twice)
+{
+    vid_pat(g->v, x / 8 + 0x118, y / 8 + 0x16a, pat);
+    if (twice) vid_pat(g->v, x / 8 + 0x11c, y / 8 + 0x16a, pat);
+}
+
 static void sonar_enemies(Game *g)
 {
     Play *p = &g->p;
     int i;
 
-    for (i = 0; i < p->nenemy; i++) {
-        const Enemy *e = &p->e[i];
-        int sx, sy, n, twice = 1;
+    if (g->hook == HOOK_PLAY)
+        for (i = 0; i < p->nenemy; i++) {
+            const Enemy *e = &p->e[i];
 
-        if (e->y <= 0xf || e->state <= 9) continue;
-        if ((unsigned)(e->kind - 1) > 8) continue;
-        switch (e->kind) {
-        case 1: n = 0xb41; break;
-        case 2: n = 0xb42; break;
-        case 3: n = 0xb43; twice = 0; break;
-        case 4: n = 0xb44; break;
-        case 5: n = 0xb45; break;
-        case 9:
-            if (g->frame % 2 == 0) continue;
-            n = 0xb40;
-            twice = 0;
-            break;
-        default: continue;
+            if (e->y <= 0xf || e->state <= 9) continue;
+            if ((unsigned)(e->kind - 1) > 8) continue;
+            switch (e->kind) {
+            case 1: blip(g, e->x, e->y, 0xb41, 1); break;
+            case 2: blip(g, e->x, e->y, 0xb42, 1); break;
+            case 3: blip(g, e->x, e->y, 0xb43, 0); break;
+            case 4: blip(g, e->x, e->y, 0xb44, 1); break;
+            case 5: blip(g, e->x, e->y, 0xb45, 1); break;
+            case 9:
+                if (g->frame % 2 != 0) blip(g, e->x, e->y, 0xb40, 0);
+                break;
+            }
         }
-        sx = e->x / 8 + 0x118;
-        sy = e->y / 8 + 0x16a;
-        vid_pat(g->v, sx, sy, n);
-        if (twice) vid_pat(g->v, sx + 4, sy, n);
+
+    if (g->hook == HOOK_AIR)
+        for (i = 0; i < p->nenemy; i++) {
+            const Enemy *e = &p->e[i];
+
+            if (e->y < -0x1f || e->state < 10) continue;
+            if ((unsigned)(e->kind - 1) > 8) continue;
+            switch (e->kind) {
+            case 1: blip(g, e->x, e->y, 0xb41, 0); break;
+            case 2: blip(g, e->x, e->y, 0xb42, 1); break;
+            case 3: blip(g, e->x, e->y, 0xb43, 1); break;
+            case 4: blip(g, e->x, e->y, 0xb44, 1); break;
+            case 5: blip(g, e->x, e->y, 0xb45, 0); break;
+            case 9:
+                if (g->frame % 2 != 0) blip(g, e->x, e->y, 0xb40, 0);
+                break;
+            }
+        }
+
+    if (g->hook == HOOK_SPACE)
+        for (i = 0; i < p->nenemy; i++) {
+            const Enemy *e = &p->e[i];
+            int slow = g->frame % 4 == 0;
+
+            if (e->y < -0x1f || e->y > 0x15f || e->state < 10) continue;
+            switch (e->kind) {
+            case 1:                     /* [20] over four, or every fourth */
+                if (e->anim > 4 || slow) blip(g, e->x, e->y, 0xb41, 0);
+                break;
+            case 2:
+            case 3:
+                blip(g, e->x, e->y, 0xb40, 1);
+                break;
+            case 4:
+                if (e->phase == 2 || e->phase == 3 || slow)
+                    blip(g, e->x, e->y, 0xb42, 1);
+                break;
+            case 5:                     /* the big ones fill four squares */
+                if (e->c1 >= 0x100 || slow) {
+                    blip(g, e->x, e->y, 0xb42, 1);
+                    vid_pat(g->v, e->x / 8 + 0x118, e->y / 8 + 0x16e, 0xb42);
+                    vid_pat(g->v, e->x / 8 + 0x11c, e->y / 8 + 0x16e, 0xb42);
+                }
+                break;
+            case 6:
+                if (e->phase != 0 || slow) blip(g, e->x, e->y, 0xb41, 0);
+                break;
+            case 7: blip(g, e->x, e->y, 0xb42, 0); break;
+            case 8:
+            case 10: blip(g, e->x, e->y, 0xb45, 0); break;
+            case 0x14:
+            case 0x15:
+                break;                  /* the shots do not show */
+            default:
+                if (g->frame % 2 != 0) blip(g, e->x, e->y, 0xb40, 0);
+                break;
+            }
+        }
+
+    /* The boss fills a block, and only on the stages where it can be hit. */
+    if (g->hook == HOOK_BOSS && p->boss_live != 0 && p->stage / 4 == 1) {
+        const Enemy *b = &p->e[0];
+        int dy, x;
+
+        for (dy = 0; dy < 0xc; dy += 4) {
+            int y = b->y / 8 + 0x16a + dy;
+
+            if (y <= 0x161 || y >= 0x199) continue;
+            for (x = 0x118; x < 0x128; x += 4)
+                vid_pat(g->v, b->x / 8 + x, y, 0xb42);
+        }
     }
+
+    if (g->hook == HOOK_END)            /* ending.dar's earth192lader */
+        blip(g, p->e[0].x, p->e[0].y, 0xb48, 0);
 }
 
 /* FUN_004093d0: the panel along the bottom - the sonar in the middle with
@@ -1151,7 +1245,7 @@ void play_frame(Game *g)
             g->hook = HOOK_PAUSE;
             g->hook_arg = 1;
         } else if (g->demo == 1) {
-            game_set_state(g, ST_TITLE5);
+            game_set_state(g, ST_PLAY_END);
             g->hook = HOOK_NONE;
             g->hook_arg = 1;
         } else if (g->demo == 2) {

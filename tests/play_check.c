@@ -116,7 +116,7 @@ int main(void)
     vid_init(&vid, &dar);
 
     start_game();
-    ok(game.state == ST_TITLE2, "Game Start reaches state 0x32");
+    ok(game.state == ST_PLAY, "Game Start reaches state 0x32");
     ok(game.hook == HOOK_PLAY, "with the play routine hooked up");
     ok(!strcmp(bgm_last, "bgm03") && bgm_mode_last == 3,
        "and bgm03 playing in the mode that does not restart it");
@@ -349,7 +349,7 @@ int main(void)
     game_set_date(&game, 1999, 2, 14);   /* the build's own date */
     for (t = 0; t < 400 && game.state != ST_TITLE; t++) game_tick(&game);
     for (t = 0; t < 0x708 + 4 && game.state == ST_TITLE; t++) game_tick(&game);
-    ok(game.state == ST_TITLE3, "the title falls into the demo");
+    ok(game.state == ST_DEMO, "the title falls into the demo");
     game_tick(&game);
     ok(game.demo == 2, "which plays a recording back");
     ok(game.reclen > 0, "demo1.dat has something in it");

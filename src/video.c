@@ -205,6 +205,45 @@ void vid_text_at(Video *v, int col, int y, const char *s, int bank)
     text_px(v, col, y, s, bank);
 }
 
+/* FUN_00402b90: the same as vid_text, except the column arrives in pixels
+ * and the original leaves off the range check there. */
+void vid_text_px(Video *v, int x, int row, const char *s, int bank)
+{
+    for (; *s; s++, x += 0x10) {
+        if (*s == ' ') continue;
+        vid_pat(v, x, row << 4, bank + (unsigned char)*s);
+    }
+}
+
+/* FUN_00414140: the staff roll's text, centred on 0x140 with the row in
+ * pixels.  staff.dar's three fonts hold 96 glyphs each starting at the
+ * space, so the glyph is `bank + char - 0x20` - not depth.dar's
+ * `bank + char` - and the letter box is the bank pattern's own size. */
+void vid_text_centre(Video *v, int y, const char *s, int bank)
+{
+    const DarPat *p = vid_pat_info(v, bank);
+    int n = (int)strlen(s), i, x;
+
+    if (!p) return;
+    x = 0x140 - (n * p->w >> 1);
+    for (i = 0; i < n; i++) {
+        if (s[i] == ' ') continue;
+        vid_pat(v, x + p->w * i, y, bank + (unsigned char)s[i] - 0x20);
+    }
+}
+
+/* FUN_00408a40: FUN_0041b6f0 with nothing in front of it, so the pattern
+ * grows out of its top-left corner - FUN_00409120 (vid_pat_scale) keeps the
+ * middle still instead - and none of FUN_00409000's clipping runs. */
+void vid_pat_scale_at(Video *v, int x, int y, int pat, int sx, int sy)
+{
+    const Dar *d = pat >= EXT_BASE ? v->ext : v->dar;
+
+    if (!d) return;
+    dar_draw_scale(d, pat >= EXT_BASE ? pat - EXT_BASE : pat, &v->px[0][0],
+                   SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, sx, sy);
+}
+
 void vid_text8(Video *v, int x, int y, const char *s)
 {
     for (; *s; s++, x += 8) {

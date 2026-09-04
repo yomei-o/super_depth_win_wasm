@@ -17,7 +17,7 @@ EMCC="$EMSDK/upstream/emscripten/emcc.exe"
 EXPORTS=_main,_sd_init,_sd_tick,_sd_width,_sd_height,_sd_framebuffer
 EXPORTS=$EXPORTS,_sd_patterns,_sd_view,_sd_set_view,_sd_song,_sd_set_song
 EXPORTS=$EXPORTS,_sd_set_bgm,_sd_audio_init,_sd_audio,_sd_audio_left
-EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_state
+EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_debug,_sd_state
 EXPORTS=$EXPORTS,_sd_fps,_sd_se_take,_sd_se_pan
 EXPORTS=$EXPORTS,_sd_rank_ptr,_sd_rank_len,_sd_rank_stamp,_sd_surface
 
@@ -33,7 +33,7 @@ done
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \
    src/main_wasm.c src/game.c src/play.c src/air.c src/space.c \
-   src/boss.c \
+   src/boss.c src/ending.c \
    src/video.c src/dar.c \
    src/smf.c src/synth.c \
    $EMBED \

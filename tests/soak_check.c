@@ -115,6 +115,11 @@ int main(int argc, char **argv)
             game.hook = HOOK_BOSS;
             game.hook_arg = 1;
         }
+        /* And the three screens only the debug menu can reach, so they get
+         * shaken out as well.  The ending walks into CAST and CAST into the
+         * roll on their own. */
+        if (t % 20011 == 20010) game_debug(&game, DBG_ENDING);
+        if (t % 30011 == 30010) game_debug(&game, DBG_STAFF);
 
         if (game.state >= 0 && game.state < 0x100) seen_state[game.state]++;
         else bad("the state is out of range", (int)t, game.state);
@@ -188,7 +193,7 @@ int main(int argc, char **argv)
      * game, and at least one of the two stage kinds. */
     if (!seen_state[ST_LOGO]) { printf("FAIL never saw the logo\n"); fails++; }
     if (!seen_state[ST_TITLE]) { printf("FAIL never saw the title\n"); fails++; }
-    if (!seen_state[ST_TITLE2] && !seen_state[ST_TITLE3]) {
+    if (!seen_state[ST_PLAY] && !seen_state[ST_DEMO]) {
         printf("FAIL never played\n");
         fails++;
     }
@@ -198,6 +203,12 @@ int main(int argc, char **argv)
             { printf("FAIL never cleared a stage\n"); fails++; }
         if (!seen_hook[HOOK_AIR])
             { printf("FAIL never reached the air stage\n"); fails++; }
+        if (!seen_hook[HOOK_END])
+            { printf("FAIL never saw the ending\n"); fails++; }
+        if (!seen_hook[HOOK_CAST])
+            { printf("FAIL never saw CAST\n"); fails++; }
+        if (!seen_hook[HOOK_STAFF])
+            { printf("FAIL never saw the staff roll\n"); fails++; }
     }
 
     if (fails) { printf("%d checks failed\n", fails); return 1; }

@@ -194,6 +194,10 @@ EMSCRIPTEN_KEEPALIVE int sd_state(void) { return g_game.state; }
 EMSCRIPTEN_KEEPALIVE int sd_fps(void) { return g_game.fps; }
 EMSCRIPTEN_KEEPALIVE void sd_set_pad(int pad) { game_set_pad(&g_game, (unsigned)pad); }
 
+/* One of the debug menu's commands - the menu the release build leaves off
+ * the window.  See the head of src/ending.c for the ids. */
+EMSCRIPTEN_KEEPALIVE int sd_debug(int cmd) { return game_debug(&g_game, cmd); }
+
 /* The score table, so the page can keep it: ten records of 40 bytes, laid
  * out exactly as the original writes them into the registry. */
 EMSCRIPTEN_KEEPALIVE unsigned char *sd_rank_ptr(void)

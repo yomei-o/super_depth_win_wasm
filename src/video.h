@@ -119,6 +119,14 @@ void vid_pat_scale(Video *v, int x, int y, int pat, int sx, int sy);
 void vid_text(Video *v, int col, int row, const char *s, int bank);
 /* FUN_00402a20: y in pixels. */
 void vid_text_at(Video *v, int col, int y, const char *s, int bank);
+/* FUN_00402b90: the column in pixels, the row still in 16-pixel units. */
+void vid_text_px(Video *v, int x, int row, const char *s, int bank);
+/* FUN_00414140: centred on the screen, the row in pixels, and the glyph is
+ * `bank + char - 0x20` the way staff.dar's fonts are laid out. */
+void vid_text_centre(Video *v, int y, const char *s, int bank);
+/* FUN_00408a40: the pattern scaled from its top-left corner. */
+void vid_pat_scale_at(Video *v, int x, int y, int pat, int sx, int sy);
+
 /* FUN_00402c10: the 8x8 font, col and row both in 8-pixel units. */
 void vid_text8_at(Video *v, int col, int row, const char *s);
 /* The same font placed by pixel, which is handy for the tools. */

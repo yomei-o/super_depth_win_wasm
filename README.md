@@ -29,6 +29,8 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 **面が 4 種類とも動き、輪になって回る。**
 ロゴ → タイトル → 海 → 空 → 宇宙 → 大物 → また海 …。
 沈められればゲームオーバー → 名前入力 → 得点表 → タイトル。
+**エンディングとスタッフロールも動く**（原作と同じく、デバッグ
+メニューからしか出られない —— 下記）。
 
 * [x] **インストーラの解体** — `depth-build115.exe` から 45 ファイル
       （`python tools/unpack.py`、`disk/` に出る。三層ぜんぶ解いてあり、
@@ -47,7 +49,9 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 * [x] **描画層** — `src/video.c`。640x480 の 8bpp、パターン描画（`y + 0x20`
       と原作のクリップつき）、原作のフォントの引きかた（`base + ASCII`）、
       行ごとに正弦でずらす描画（`vid_pat_wave`）、当たった敵の白い影
-      （`vid_pat_flash`）、横に縮める描画（`vid_pat_scale`）
+      （`vid_pat_flash`）、拡大縮小（`vid_pat_scale` と、左上を留める
+      `vid_pat_scale_at`）、staff.dar の中央そろえフォント
+      （`vid_text_centre`。**こちらは `base + ASCII - 0x20`**）
 * [x] **BGM** — 原作の SMF を自前で合成する（`src/smf.c` / `src/synth.c` は
       user 自身の [windepth_wasm](https://github.com/yomei-o/windepth_wasm)
       から。同じ Bio_100% の WinDepth 用に書かれたもの）
@@ -67,6 +71,17 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 * [x] **4 面目（大物）**（`src/boss.c`）— `FUN_00403dc0`。30 発で
       崩れて 8 つに割れ、**面番号が 1 に戻って海の面へ** —— 4 種類の面が
       輪になって回る（`disk/depth5.jpg` の画面）
+* [x] **エンディング・CAST・スタッフロール**（`src/ending.c`）—
+      `FUN_00408650` / `FUN_00408a80` / `FUN_00414210`。地球が右から流れて
+      きて "Congratulation!!"、生き物 20 匹が名前つきで歩く CAST、
+      そして staff.dar の 3 色フォントで組んだスタッフロール
+      （`finst1.mid`）。**原作でも面クリアからは入れない** —— 窓に付く
+      メニューが `menu_release` の方だから
+* [x] **デバッグ メニュー**（`game_debug`）— 実行ファイルに残っている
+      もう一方のメニュー資源（`MENU`）と、`0x426100` からの WM_COMMAND
+      をそのまま。モードセレクト（ロゴ・タイトル・エンディング・
+      スタッフロール）とステージセレクト（STAGE 01..12）、フルパワー、
+      デモ再生・録画
 * [x] 得点表の保存 — 原作はレジストリ、ここはページの localStorage
 * [x] `stage3.bin` — **3 面（宇宙）の台本**。0x20 の頭 + 24 バイト x 275。
       海と空の面の敵は `0x43fae8` の表、宇宙の面だけこのファイル
@@ -88,7 +103,8 @@ native の道具と検査を全部作って走らせ、PNG を `tmp/` に吐く�
 | `tmp/air_check.exe` | 空の面（移動・射撃・当たり・クリアの演出） |
 | `tmp/space_check.exe` | 宇宙の面（台本 275 手・敵 12 種・弾・得点） |
 | `tmp/boss_check.exe` | 大物の面（寄ってくる・弱点・30 発・8 つに割れて海へ戻る） |
-| `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか。4 種類の面ぜんぶ通る |
+| `tmp/ending_check.exe` | エンディング・CAST 20 匹・スタッフロール、デバッグ命令 |
+| `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか。4 種類の面とエンディング 3 画面ぜんぶ通る |
 | `tests/wasm_check.js` | WASM を node で動かして 1 枚描き、音が出ているか、**native と 1 バイトも違わないか** |
 
 絵は `tmp/sd_shot.exe` で見る:
@@ -108,8 +124,8 @@ tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ
 | `depth.dar` | 1335036。パターン 2887 枚 |
 | `depth1.dar` / `depth2.dar` | 132072 ずつ。海と空のタイル |
 | `space.dar` / `ending.dar` / `staff.dar` | 星雲・地球・Bio_100% のロゴ |
-| `stage3.bin` | 6632。"SDEPTH" で始まる面データ（本体は読まない） |
-| `bgm01`..`bgm15.mid`, `finst1.mid` | BGM（SMF） |
+| `stage3.bin` | 6632。"SDEPTH" で始まる **3 面（宇宙）の台本**。`FUN_00413df0` が読む |
+| `bgm01`..`bgm15.mid`, `finst1.mid` | BGM（SMF）。`finst1` はスタッフロール。表にある `finend2` だけ入っていない |
 | `*.wav` | 効果音（RIFF）。表にある `plane` だけ入っていない |
 | `depth2..5.jpg`, `ielike.gif`, `index.html` | HTML マニュアル |
 | `demo1.dat` | デモの記録（1 フレーム 1 バイト） |

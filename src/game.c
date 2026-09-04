@@ -305,7 +305,7 @@ static void hook_menu(Game *g)
         g->menu_idle = 0;
         switch (g->menu_cur) {
         case 0:                         /* Game Start */
-            game_set_state(g, ST_TITLE2);
+            game_set_state(g, ST_PLAY);
             g->hook = HOOK_PLAY;
             g->hook_arg = 1;
             g->draw = DRAW_NONE;
@@ -330,7 +330,7 @@ static void hook_menu(Game *g)
     /* 0x708 frames of nobody touching anything - 59 seconds at 33ms - and
      * the demo takes over. */
     if (++g->menu_idle >= 0x708) {
-        game_set_state(g, ST_TITLE3);
+        game_set_state(g, ST_DEMO);
         g->hook = HOOK_PLAY;
         g->hook_arg = 1;
         g->draw = DRAW_NONE;
@@ -532,6 +532,12 @@ static void play_clear(Game *g)
 
     memset(&keep, 0, sizeof keep);
     g->p = keep;
+    /* Its tail zeroes the pad's spread copies and both of the previous ones,
+     * and then the frame counter itself - so every play starts with the
+     * animations at phase 0. */
+    g->pad = 0;
+    g->pad_prev = 0;
+    g->frame = 0;
 }
 
 /* FUN_00403240: read DEMO1.DAT, one byte a frame. */
@@ -588,14 +594,14 @@ static void st_play(Game *g)
         p->stage = 1;                   /* DAT_00463da4 */
         p->lives = 2;                   /* DAT_00462194 */
         p->nenemy = 10;                 /* DAT_00463dac */
-        p->demo = g->state == ST_TITLE3 ? 1 : 0;        /* DAT_0046218c */
-        if (g->state == ST_TITLE3) demo_load(g);        /* FUN_00403240 */
-        else if (g->state == ST_TITLE4) demo_record(g); /* FUN_00403070 */
+        p->demo = g->state == ST_DEMO ? 1 : 0;        /* DAT_0046218c */
+        if (g->state == ST_DEMO) demo_load(g);        /* FUN_00403240 */
+        else if (g->state == ST_RECORD) demo_record(g); /* FUN_00403070 */
         else g->demo = 0;                               /* FUN_00403350 */
         g->seed = 1;                    /* FUN_00426912(1) */
     }
     p->cycle = ((p->stage - 1) % 4) + 1;                /* DAT_00462198 */
-    if (g->state != ST_TITLE2) demo_tick(g);            /* FUN_00403370 */
+    if (g->state != ST_PLAY) demo_tick(g);            /* FUN_00403370 */
 
     switch (g->hook) {
     case HOOK_PLAY:
@@ -618,6 +624,15 @@ static void st_play(Game *g)
         break;
     case HOOK_BOSS:
         boss_frame(g);
+        break;
+    case HOOK_END:
+        end_frame(g);
+        break;
+    case HOOK_CAST:
+        cast_frame(g);
+        break;
+    case HOOK_STAFF:
+        staff_frame(g);
         break;
     case HOOK_OVER:
         play_over_frame(g);
@@ -671,10 +686,10 @@ static void frame(Game *g)
     case ST_LOGO0:
     case ST_LOGO:  st_logo(g); break;
     case ST_TITLE: st_title(g); break;
-    case ST_TITLE2:
-    case ST_TITLE3:
-    case ST_TITLE4: st_play(g); break;
-    case ST_TITLE5: st_play_end(g); break;
+    case ST_PLAY:
+    case ST_DEMO:
+    case ST_RECORD: st_play(g); break;
+    case ST_PLAY_END: st_play_end(g); break;
     case ST_VERSION: st_version(g); break;
     default:       st_todo(g); break;
     }
@@ -749,6 +764,92 @@ void game_set_date(Game *g, int year, int month, int day)
     g->year = year;
     g->month = month;
     g->day = day;
+}
+
+/* The debug menu's WM_COMMAND handlers, 0x426100..0x4266d1.  The menu they
+ * belong to is still in the executable (resource MENU), but FUN_00421120
+ * registers the window class with `menu_release` instead, so in the shipped
+ * build nothing can send them.  The ids are the resource's own.
+ *
+ * The stage-select and full-power ones only answer while the state is one of
+ * the three playing states (0x32 play, 0x33 demo, 0x34 recording), exactly
+ * as the handlers check. */
+int game_debug(Game *g, int cmd)
+{
+    Play *p = &g->p;
+    int stage = 0, hook = 0, i;
+
+    switch (cmd) {
+    case DBG_LOGO:                      /* 0x42658d */
+        game_set_state(g, ST_LOGO0);
+        return 1;
+    case DBG_TITLE:                     /* 0x426599 */
+        game_set_state(g, ST_TITLE);
+        return 1;
+    case DBG_ENDING:                    /* 0x4265a5 */
+        p->score = 0;
+        p->loaded = 2;
+        p->stage = 2;
+        p->lives = 2;
+        p->nenemy = 10;
+        p->px = 0x120;
+        p->py = 0x60;
+        for (i = 0; i < STARS2; i++) {
+            p->cloud[i].x = game_rand(g) % 0x280;
+            p->cloud[i].y = game_rand(g) % 0x160;
+            p->cloud[i].kind = game_rand(g) % 6;
+        }
+        g->hook = HOOK_END;
+        g->hook_arg = 1;
+        game_set_state(g, ST_PLAY);
+        return 1;
+    case DBG_STAFF:                     /* 0x426638 */
+        g->hook = HOOK_STAFF;
+        g->hook_arg = 1;
+        game_set_state(g, ST_PLAY);
+        return 1;
+    case DBG_DEMO_PLAY:                 /* 0x426668 */
+        g->hook = HOOK_PLAY;
+        g->hook_arg = 1;
+        game_set_state(g, ST_DEMO);
+        return 1;
+    case DBG_DEMO_REC:                  /* 0x426650 */
+        g->hook = HOOK_PLAY;
+        g->hook_arg = 1;
+        game_set_state(g, ST_RECORD);
+        return 1;
+    default:
+        break;
+    }
+
+    if (cmd >= DBG_STAGE01 && cmd <= DBG_STAGE06) stage = cmd - DBG_STAGE01 + 1;
+    else if (cmd >= DBG_STAGE07 && cmd <= DBG_STAGE12) stage = cmd - DBG_STAGE07 + 7;
+    else if (cmd != DBG_FULLPOWER) return 0;
+
+    if (g->state != ST_PLAY && g->state != ST_DEMO && g->state != ST_RECORD)
+        return 1;                       /* the handler answers and does nothing */
+
+    if (cmd == DBG_FULLPOWER) {         /* 0x4262e2, item 6 without the item */
+        int was = p->item;
+
+        p->item = 6;
+        play_item_apply(&g->p);
+        p->item = was;
+        plat_se("item", 0);
+        return 1;
+    }
+
+    switch (stage % 4) {                /* 1 sea, 2 air, 3 space, 0 the boss */
+    case 1: hook = HOOK_PLAY; break;
+    case 2: hook = HOOK_AIR; break;
+    case 3: hook = HOOK_SPACE; break;
+    default: hook = HOOK_BOSS; break;
+    }
+    p->stage = stage;
+    p->loaded = stage;
+    g->hook = hook;
+    g->hook_arg = 1;
+    return 1;
 }
 
 void game_tick(Game *g)

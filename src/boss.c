@@ -133,7 +133,7 @@ static void star_move(Game *g)
 
     if (p->drift_x == 0 && p->drift_y == 0) return;
     for (i = 0; i < STARS2; i++) {
-        Star2 *st = &p->star2[i];
+        Cloud *st = &p->cloud[i];
         st->x += p->drift_x;
         st->y += p->drift_y;
         if (p->drift_x != 0) st->x += p->drift_x < 0 ? -st->kind : st->kind;
@@ -172,9 +172,7 @@ void boss_frame(Game *g)
         g->hook_arg = 0;
         game_scene(g, "space.dar", 0x32);
         play_field_build(g);
-        p->announce = 0;
-        p->over = 0;
-        p->banner = 0;
+        play_clear_banners(g);          /* FUN_0040a9f0 */
         p->nenemy = 10;
         boom_clear(p);
         g->flash = 6;
@@ -194,9 +192,9 @@ void boss_frame(Game *g)
             p->life = 10;
             p->px = 0x40;
             for (i = 0; i < STARS2; i++) {
-                p->star2[i].x = game_rand(g) % 0x280;
-                p->star2[i].y = game_rand(g) % 0x160;
-                p->star2[i].kind = game_rand(g) % 6;
+                p->cloud[i].x = game_rand(g) % 0x280;
+                p->cloud[i].y = game_rand(g) % 0x160;
+                p->cloud[i].kind = game_rand(g) % 6;
             }
             for (i = 0; i < DUSTS; i++) {   /* FUN_00413ae0 */
                 p->dust[i].x = game_rand(g) % 0x280;
@@ -597,7 +595,7 @@ void boss_frame(Game *g)
         dust_draw(g);
     } else {
         for (i = 0; i < STARS2; i++)
-            vid_pat(v, p->star2[i].x, p->star2[i].y, p->star2[i].kind + 0xb30);
+            vid_pat(v, p->cloud[i].x, p->cloud[i].y, p->cloud[i].kind + 0xb30);
     }
 
     /* --- the pieces ----------------------------------------------------- */
@@ -656,7 +654,7 @@ void boss_frame(Game *g)
             g->hook = HOOK_PAUSE;
             g->hook_arg = 1;
         } else if (g->demo == 1) {
-            game_set_state(g, ST_TITLE5);
+            game_set_state(g, ST_PLAY_END);
             g->hook = HOOK_NONE;
             g->hook_arg = 1;
         } else if (g->demo == 2) {

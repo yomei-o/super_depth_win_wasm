@@ -97,14 +97,17 @@ typedef struct {            /* DAT_00463dd8, y >= 0x160 means free */
     int t;                  /* +0x14, the boss stage's homing counter -
                              * nothing in this build ever sets it */
 } ABomb;
-typedef struct { int x, y, kind; } Cloud;   /* DAT_004a8a58, 4 ints, the rain */
+/* DAT_004a8a58: 64 records of four ints.  The air stage keeps its rain in
+ * them and the space and boss stages their starfield - in the original that
+ * is one and the same memory, and the ending draws whatever the stage before
+ * it left there, so they are one array here too. */
+typedef struct { int x, y, kind; } Cloud;
 
 /* The space stage (src/space.c).  The script is stage3.bin turned into
  * FUN_00413df0's runtime form: six ints an entry, and the entry after the
  * last one has type 0xff. */
 typedef struct { int type, v, a, b, c, d; } Script;
 typedef struct { int x, y, vx, on; } Big;   /* DAT_004bb148, the big shots */
-typedef struct { int x, y, kind; } Star2;   /* DAT_004a8a40, the starfield */
 typedef struct {                            /* DAT_004ba940, FUN_00413ae0 */
     int k1, k2, k3, k4;
     int x, y, vy, a;
@@ -120,7 +123,7 @@ typedef struct {            /* DAT_004a4858, 8 ints, 64 of them */
 #define SCRIPTS 320
 #define BOOMS   64
 #define BIGS    64
-#define STARS2  64
+#define STARS2  64      /* the same 64 records as CLOUDS */
 #define DUSTS   64
 
 #define UPSHOTS 16
@@ -210,7 +213,6 @@ typedef struct {
     int big_timer;          /* DAT_004ba938 */
     int flash2;             /* DAT_004ba930, one white frame */
     int emerg;              /* DAT_004ba934, the EMERGENCY countdown */
-    Star2 star2[STARS2];
     int drift_x, drift_y;   /* DAT_004a8a50 / DAT_004a8a54 */
     Dust dust[DUSTS];
     int scroll_n;           /* DAT_004b78d8, how fast the sky goes past */
@@ -224,6 +226,17 @@ typedef struct {
     int boss_phase;         /* DAT_004a4c8c */
     int boss_cool;          /* DAT_004a4c90 */
     int boss_live;          /* DAT_00461330, which the sonar reads */
+
+    /* the ending and what follows it (src/ending.c) */
+    int end_hold;           /* DAT_004a84fc, frames since the earth arrived */
+    int cast_state;         /* DAT_004a8504 */
+    int cast_i;             /* DAT_004a8528, which of the twenty */
+    int cast_x;             /* DAT_004a8510, the slide */
+    int cast_t;             /* DAT_004a8514 */
+    int cast_anim;          /* DAT_004a8524 */
+    int staff_y;            /* DAT_004bf154, the roll's scroll */
+    int staff_hold;         /* DAT_004bf158 */
+    int staff_t;            /* DAT_004bf15c, and it is on the screen */
 
     /* the pause menu (FUN_0040b960) */
     int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */

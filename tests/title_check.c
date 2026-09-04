@@ -207,7 +207,7 @@ int main(void)
     ok(run_to(ST_TITLE, 400) > 0, "the logo reaches the title again");
     game_tick(&game);
     tap(PAD_BTN1);
-    ok(game.state == ST_TITLE2, "BTN1 on Game Start goes to state 0x32");
+    ok(game.state == ST_PLAY, "BTN1 on Game Start goes to state 0x32");
     ok(game.hook == HOOK_PLAY && game.hook_arg == 1, "with the play hook armed");
     ok(game.draw == DRAW_NONE, "and the menu overlay gone");
 
@@ -216,7 +216,7 @@ int main(void)
     run_to(ST_TITLE, 400);
     game_tick(&game);
     tap(PAD_START);
-    ok(game.state == ST_TITLE2, "START also starts the game");
+    ok(game.state == ST_PLAY, "START also starts the game");
 
     /* Exit: state 0x5a, which is two lines and PostQuitMessage. */
     game_init(&game, &vid);
@@ -234,7 +234,7 @@ int main(void)
     game_init(&game, &vid);
     run_to(ST_TITLE, 400);
     for (t = 0; t < 0x708 + 2 && game.state == ST_TITLE; t++) game_tick(&game);
-    ok(game.state == ST_TITLE3, "0x708 idle frames hand over to the demo");
+    ok(game.state == ST_DEMO, "0x708 idle frames hand over to the demo");
     ok(t >= 0x708 && t <= 0x709, "which is 1800 frames, not sooner");
 
     if (fails) { printf("%d checks failed\n", fails); return 1; }

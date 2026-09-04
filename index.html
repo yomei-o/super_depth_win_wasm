@@ -29,6 +29,15 @@
   #status { min-height: 1.6em; opacity: .8; }
   #diag { opacity: .45; font-size: 11px; font-family: ui-monospace, monospace; }
   a { color: #7ab7d8; }
+  details { max-width: 60em; opacity: .85; }
+  summary { cursor: pointer; }
+  #dbg { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  #dbg button {
+    background: #1c2329; color: #c8d0d8; border: 1px solid #2f3942;
+    border-radius: 3px; padding: 2px 7px; font: inherit; cursor: pointer;
+  }
+  #dbg button:hover { background: #26303a; }
+  #dbg .gap { width: 10px; }
 </style>
 </head>
 <body>
@@ -54,10 +63,25 @@
   大物を 30 発で倒すと 1 面に戻って**輪になって回ります**。空と宇宙では
   上下にも動けて、<kbd>Z</kbd> と <kbd>X</kbd> が別の向きの弾です。
   宇宙に出てくるものは原作の <code>stage3.bin</code> の台本どおり。
+  エンディングとスタッフロールもありますが、原作と同じで
+  <b>下のデバッグ メニューからしか出ません</b>。
   <kbd>1</kbd><kbd>2</kbd> は原作から取り出した絵の展示で、これは移植の
   ついでに作ったものです。
   <a href="https://github.com/yomei-o/super_depth_win_wasm">ソースと解析メモ</a>
 </div>
+
+<details>
+  <summary>デバッグ メニュー（原作にあるが、製品版の窓には付いていないもの）</summary>
+  <div>
+    原作の実行ファイルにはメニューが 2 つ入っていて、窓に付くのは
+    <code>menu_release</code> の方です。もう一方（<code>MENU</code>）には
+    <b>デバッグ</b> があって、モードセレクトとステージセレクトが並んでいます。
+    命令を受ける側（<code>0x426100</code> からの WM_COMMAND）はそのまま
+    残っているので、同じ番号で同じことをします。
+    <b>エンディングとスタッフロールはここからしか出ません。</b>
+  </div>
+  <div id="dbg"></div>
+</details>
 
 <script>
 const cv = document.getElementById('screen');
@@ -278,6 +302,37 @@ addEventListener('keyup', e => {
     e.preventDefault();
   }
 });
+// The debug menu's own ids, out of the MENU resource.
+const DBG = [
+  ['Bio_100% ロゴ', 0x86d], ['タイトル画面', 0x86e],
+  ['エンディング', 0x86f], ['スタッフロール', 0x870], ['gap', 0],
+  ['STAGE 01', 0x84e], ['STAGE 02', 0x84f], ['STAGE 03', 0x850],
+  ['STAGE 04', 0x851], ['STAGE 05', 0x852], ['STAGE 06', 0x853],
+  ['STAGE 07', 0x872], ['STAGE 08', 0x873], ['STAGE 09', 0x874],
+  ['STAGE 10', 0x875], ['STAGE 11', 0x876], ['STAGE 12', 0x877], ['gap', 0],
+  ['フルパワー', 0x85f], ['デモ再生', 0x87b], ['デモ録画開始', 0x878],
+];
+{
+  const box = document.getElementById('dbg');
+  for (const [label, id] of DBG) {
+    if (label === 'gap') {
+      const s = document.createElement('span');
+      s.className = 'gap';
+      box.appendChild(s);
+      continue;
+    }
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = () => {
+      ensureContext();
+      if (!ready) return;
+      Module._sd_debug(id);
+      statusEl.textContent = label + '（0x' + id.toString(16) + '）';
+    };
+    box.appendChild(b);
+  }
+}
+
 cv.addEventListener('mousedown', ensureContext);
 addEventListener('pointerdown', ensureContext);
 </script>

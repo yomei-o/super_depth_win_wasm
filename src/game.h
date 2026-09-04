@@ -30,10 +30,10 @@ enum {
     ST_LOGO0   = 0x0f,      /* the Bio_100% logo; 0x0f and 0x10 are the same */
     ST_LOGO    = 0x10,
     ST_TITLE   = 0x1e,      /* the sea title */
-    ST_TITLE2  = 0x32,
-    ST_TITLE3  = 0x33,
-    ST_TITLE4  = 0x34,
-    ST_TITLE5  = 0x35,      /* goes back to ST_LOGO, which is the demo loop */
+    ST_PLAY    = 0x32,      /* playing; all three run the hook */
+    ST_DEMO    = 0x33,      /* the demo playing back */
+    ST_RECORD  = 0x34,      /* recording one (the debug menu's own entries) */
+    ST_PLAY_END = 0x35,     /* goes back to ST_LOGO, which is the demo loop */
     ST_SOUND   = 0x46,      /* SOUND TEST */
     ST_VERSION = 0x5a       /* version, credits, then PostQuitMessage */
 };
@@ -77,7 +77,10 @@ enum { HOOK_NONE = 0,
        HOOK_PAUSE = 5,                  /* LAB_00401041 -> FUN_0040b960 */
        HOOK_AIRCLEAR = 6,               /* LAB_004010d2 -> FUN_0040f490 */
        HOOK_SPACE = 7,                  /* LAB_0040110e -> FUN_0040f970 */
-       HOOK_BOSS = 8 };                 /* LAB_004011c7 -> FUN_00403dc0 */
+       HOOK_BOSS = 8,                   /* LAB_004011c7 -> FUN_00403dc0 */
+       HOOK_END = 9,                    /* LAB_0040113b -> FUN_00408650 */
+       HOOK_CAST = 10,                  /* 0x401136     -> FUN_00408a80 */
+       HOOK_STAFF = 11 };               /* LAB_00401091 -> FUN_00414210 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -198,6 +201,7 @@ void play_item_apply(Play *p);          /* FUN_0040aab0 */
 void play_item_name(Game *g, int x, int y, int kind);   /* FUN_0040b1c0 */
 void play_boom(Video *v, int x, int y, int frame);      /* FUN_0040ae50 */
 void play_status_bar(Game *g);          /* FUN_004093d0 */
+void play_clear_banners(Game *g);       /* FUN_0040a9f0 */
 int  play_score_of(const Play *p, int kind);            /* 0x43fe70's table */
 
 /* src/air.c */
@@ -209,5 +213,22 @@ void space_frame(Game *g);              /* FUN_0040f970, the stage after that */
 
 /* src/boss.c */
 void boss_frame(Game *g);               /* FUN_00403dc0, the fourth kind */
+
+/* src/ending.c - the three screens only the debug menu can reach */
+void end_frame(Game *g);                /* FUN_00408650 */
+void cast_frame(Game *g);               /* FUN_00408a80 */
+void staff_frame(Game *g);              /* FUN_00414210 */
+
+/* The debug menu's commands (the MENU resource the release build drops),
+ * by the resource's own ids.  Answers non-zero when the command was one of
+ * them.  See the head of src/ending.c. */
+enum { DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
+       DBG_STAGE04 = 0x851, DBG_STAGE05 = 0x852, DBG_STAGE06 = 0x853,
+       DBG_FULLPOWER = 0x85f,
+       DBG_LOGO = 0x86d, DBG_TITLE = 0x86e,
+       DBG_ENDING = 0x86f, DBG_STAFF = 0x870,
+       DBG_STAGE07 = 0x872, DBG_STAGE12 = 0x877,
+       DBG_DEMO_REC = 0x878, DBG_DEMO_PLAY = 0x87b };
+int  game_debug(Game *g, int cmd);
 
 #endif
