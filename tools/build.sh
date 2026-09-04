@@ -20,6 +20,7 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/sd_shot.exe   src/main_shot.c src/png.c $CORE $GAME
     $CC -o tmp/dar_check.exe tests/dar_check.c $CORE
     $CC -o tmp/logo_check.exe tests/logo_check.c src/png.c $CORE $GAME
+    $CC -o tmp/title_check.exe tests/title_check.c src/png.c $CORE $GAME
     $CC -o tmp/unlib.exe     tools/unlib.c tools/blast.c -Itools
     $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
 fi
@@ -32,6 +33,7 @@ if [ "$what" = check ]; then
     echo "== checks"
     ./tmp/dar_check.exe
     ./tmp/logo_check.exe
+    ./tmp/title_check.exe
     echo "== shots"
     ./tmp/sd_shot.exe sheet disk/depth1.dar tmp/sheet_sea.png
     ./tmp/sd_shot.exe pat   disk/staff.dar  tmp/biologo.png 0

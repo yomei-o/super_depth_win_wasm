@@ -34,6 +34,11 @@ void plat_bgm(int mode, const char *name)
     printf("bgm: mode %d %s\n", mode, name);
 }
 
+void plat_se(const char *name)
+{
+    printf("se: %s\n", name);
+}
+
 static int save(const char *path, const Gfx *g, int w, int h)
 {
     static unsigned char buf[GFX_H][GFX_W];

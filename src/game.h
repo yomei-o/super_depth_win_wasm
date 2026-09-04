@@ -52,6 +52,15 @@ enum {
 #define PAD_ESC   0x8000                /* DAT_004bf84c */
 
 #define LOGO_ROWS 0xb8                  /* DAT_0044653c, one int a pixel row */
+#define FISH 9                          /* DAT_00449260, the title's swimmers */
+
+/* DAT_004492c8, the routine the play states call every frame.  The original
+ * keeps a code pointer (one of the thunks at 0x401100); here it is an id. */
+enum { HOOK_NONE = 0, HOOK_PLAY = 1 };  /* LAB_00401168 -> FUN_00405c10 */
+
+/* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
+enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
+       DRAW_RECORD = 2 };               /* LAB_004010af -> FUN_00414b00 */
 
 typedef struct {
     Video *v;
@@ -77,13 +86,33 @@ typedef struct {
     int logo_left;                      /* DAT_004492b8, rows still hidden */
     int logo_phase;                     /* DAT_004492c0: 0 = show, 2 = hide */
     int logo_timer;                     /* DAT_0045cb78 */
+
+    int tick5, wob;                     /* DAT_00446508 / DAT_004492d4 */
+    int fish_x[FISH];                   /* DAT_00449288 */
+    int fish_y[FISH];                   /* DAT_00449260, 0 = the slot is free */
+    int fish_vx[FISH];                  /* DAT_00446514 */
+    int staff_step;                     /* DAT_004492f0 */
+    int staff_col;                      /* DAT_004492b4 */
+    int staff_wait;                     /* DAT_00446538 */
+    int staff_line;                     /* DAT_004492c4, 0..7 */
+
+    int draw, draw_new;                 /* DAT_004bf164 / DAT_004bf170 */
+    int menu_cur;                       /* DAT_004bf168, 0..2 */
+    int menu_idle;                      /* DAT_004bf16c, 0x708 -> the demo */
+    int quit;                           /* state 0x5a's PostQuitMessage */
 } Game;
+
+/* The three lines of the title menu (DAT_00441d68) and the eight staff lines
+ * the title scrolls (0x43ed40, 0x25 bytes apiece). */
+extern const char *const GAME_MENU[3];
+extern const char *const GAME_STAFF[8];
 
 /* The two things the game needs from the outside.  The front end provides
  * them: the paths differ between the native tools and the wasm build, and
  * the music is the page's business. */
 int  plat_dar(Dar *d, const char *name);        /* load pic\<name> */
 void plat_bgm(int mode, const char *name);      /* FUN_00420980(mode, name) */
+void plat_se(const char *name);                 /* FUN_0041fd00(name), a WAV */
 
 void game_init(Game *g, Video *v);
 void game_set_pad(Game *g, unsigned pad);

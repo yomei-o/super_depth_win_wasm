@@ -36,6 +36,11 @@ void plat_bgm(int mode, const char *name)
     strncpy(bgm_last, name, sizeof bgm_last - 1);
 }
 
+void plat_se(const char *name)
+{
+    (void)name;
+}
+
 static void ok(int cond, const char *what)
 {
     if (!cond) { printf("FAIL %s\n", what); fails++; }

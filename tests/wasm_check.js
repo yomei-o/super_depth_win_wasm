@@ -120,6 +120,16 @@ function png(w, h, rgba) {
   for (let t = ticks; t < 170; t++) Module._sd_tick();
   ok(Module._sd_state() === 0x1e, 'the logo hands over to the title (state ' +
      Module._sd_state().toString(16) + ')');
+  for (let t = 0; t < 30; t++) Module._sd_tick();
+  {
+    const p2 = Module._sd_framebuffer();
+    const rgba2 = Buffer.from(Module.HEAPU8.subarray(p2, p2 + w * h * 4));
+    let lit2 = 0;
+    for (let i = 0; i < rgba2.length; i += 4)
+      if (rgba2[i] | rgba2[i + 1] | rgba2[i + 2]) lit2++;
+    ok(lit2 > 200000, 'the title comes up full of sea (' + lit2 + ' lit)');
+    fs.writeFileSync(out.replace(/\.png$/, '') + '_title.png', png(w, h, rgba2));
+  }
   ok(peak > 0.01, 'the synthesiser makes a signal (peak ' + peak.toFixed(3) + ')');
   ok(peak <= 1.0, 'and it does not clip');
   console.log(`frame ${ticks} -> ${out}  (${lit} lit)  music peak ${peak.toFixed(3)} rms ${rms.toFixed(4)}`);

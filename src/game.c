@@ -7,6 +7,24 @@
 #include <stdio.h>
 #include <string.h>
 
+/* DAT_00441d68: three pointers, drawn at col 0x1c, rows 0x0c/0x0e/0x10. */
+const char *const GAME_MENU[3] = {
+    " Game Start ", "   Record   ", "    Exit    "
+};
+
+/* 0x43ed40: eight fixed 0x25 byte slots, 36 characters each.  The '@' in the
+ * last one is the character the original has; the font draws it as a (c). */
+const char *const GAME_STAFF[8] = {
+    "     Game Design : alty & tacox     ",
+    "   Character Design : tacox & alty  ",
+    "  Music Composition : FIN & CLAUDE  ",
+    "        Font Design : tacox         ",
+    "         Programming : alty         ",
+    "         Bio_100% Presents          ",
+    "     Super Depth  version 1.00a     ",
+    "   @ 1991 alty & tacox / Bio_100%   "
+};
+
 /* ---- the pieces the states are built out of --------------------------- */
 
 /* FUN_0042691c: seed = seed * 0x343fd + 0x269ec3, take bits 16..30.  That is
@@ -73,6 +91,22 @@ static int any_key(Game *g)
         return (((g->pad & PAD_BTN1) && !(g->pad_prev & PAD_BTN1)) ||
                 ((g->pad & PAD_JOY7) && !(g->pad_prev & PAD_JOY7))) ? 1 : 0;
     return 0;
+}
+
+/* FUN_00402ec0: the same thing for the start button (bit 0x1000, F2).  It
+ * burns a random number too. */
+static int start_key(Game *g)
+{
+    game_rand(g);
+    if (g->demo == 0 || g->demo == 1)
+        return ((g->pad & PAD_START) && !(g->pad_prev & PAD_START)) ? 1 : 0;
+    return 0;
+}
+
+/* The pad edges the menu reads straight out of WinGL's spread block. */
+static int edge(const Game *g, unsigned bit)
+{
+    return ((g->pad & bit) && !(g->pad_prev & bit)) ? 1 : 0;
 }
 
 /* ---- the states ------------------------------------------------------- */
@@ -164,6 +198,246 @@ static void st_logo(Game *g)
     if (any_key(g) && g->logo_phase >= 0 && g->logo_phase < 2) g->logo_phase = 2;
 }
 
+/* FUN_00402800: the SUPER DEPTH logo, laid out of 16x16 tiles from depth.dar
+ * rather than kept as one picture.  Three blocks of arithmetic, kept exactly
+ * as they are written: the first walks a 16-wide grid of tiles from 0x205 (a
+ * row of the grid is 0x10 patterns, which is why the pattern and the y move
+ * by the same 0x10), the second adds four more columns on the right with
+ * three further bands (+0x209, +0x211, +0x20d) and the third puts five tiles
+ * on the two rows above. */
+static void title_logo(Game *g)
+{
+    Video *v = g->v;
+    int col, x, y, n, i;
+
+    for (col = 0x16; col < 0x36; col += 2) {
+        n = col / 2 + 0x205;
+        for (y = 0x40; y < 0x90; y += 0x10, n += 0x10)
+            vid_pat(v, col * 8, y, n);
+    }
+    for (y = 0x70; y < 0x90; y += 0x10) {
+        int c = 0x36;
+        for (x = 0x1b0; x < 0x1f0; x += 0x10, c += 2) {
+            n = c / 2 + y - 0x30;
+            vid_pat(v, x,        y - 0x30, n + 0x205);
+            vid_pat(v, x,        y - 0x10, n + 0x209);
+            vid_pat(v, x,        y,        n + 0x211);
+            vid_pat(v, x - 0x80, y + 0x20, n + 0x20d);
+        }
+    }
+    for (i = 0, x = 0x90; i < 5; i++, x += 0x10) {
+        vid_pat(v, x, 0x20, 0x30b + i - 5);
+        vid_pat(v, x, 0x30, 0x30b + i);
+    }
+}
+
+/* FUN_00414920, armed as WinGL's overlay hook while the title is up: the
+ * three item menu, the logo above it, and the attract timeout.
+ *
+ * Note the order the buttons are tested in - BTN1 first, and only if that is
+ * not down the start button - because each of those calls burns a random
+ * number, and the sequence has to come out the same. */
+static void hook_menu(Game *g)
+{
+    Video *v = g->v;
+    int i;
+
+    if (g->draw_new) {
+        g->menu_cur = 0;
+        g->menu_idle = 0;
+        g->draw_new = 0;
+    }
+    if (edge(g, PAD_DOWN)) {
+        g->menu_idle = 0;
+        if (++g->menu_cur > 2) g->menu_cur = 0;
+    }
+    if (edge(g, PAD_UP)) {
+        g->menu_idle = 0;
+        if (--g->menu_cur < 0) g->menu_cur = 2;
+    }
+    if (any_key(g) || start_key(g)) {
+        g->menu_idle = 0;
+        switch (g->menu_cur) {
+        case 0:                         /* Game Start */
+            set_state(g, ST_TITLE2);
+            g->hook = HOOK_PLAY;
+            g->hook_arg = 1;
+            g->draw = DRAW_NONE;
+            g->draw_new = 1;
+            break;
+        case 1:                         /* Record */
+            plat_se("depth01");
+            g->draw = DRAW_RECORD;
+            g->draw_new = 1;
+            break;
+        case 2:                         /* Exit */
+            set_state(g, ST_VERSION);
+            break;
+        }
+    }
+
+    title_logo(g);
+    for (i = 0; i < 3; i++)
+        vid_text(v, 0x1c, 0x0c + i * 2, GAME_MENU[i],
+                 i == g->menu_cur ? FNT_YELLOW : FNT_BLACK);
+
+    /* 0x708 frames of nobody touching anything - 59 seconds at 33ms - and
+     * the demo takes over. */
+    if (++g->menu_idle >= 0x708) {
+        set_state(g, ST_TITLE3);
+        g->hook = HOOK_PLAY;
+        g->hook_arg = 1;
+        g->draw = DRAW_NONE;
+        g->draw_new = 1;
+    }
+}
+
+/* case 0x1e: the sea title.  depth1.dar goes into the slots at 0xb47, so
+ * 0xb47..0xb4a are sea01..sea04 and 0xb4c is sky01; the ground tiles below
+ * are depth.dar's.  Everything is placed in the game's own coordinates, so
+ * video.c adds the 32 pixels of frame.
+ */
+static void st_title(Game *g)
+{
+    Video *v = g->v;
+    const DarPat *p;
+    int i, x, y, n, band, step;
+
+    if (g->entered) {
+        g->entered = 0;
+        g->sub = 0;
+        scene(g, "depth1.dar", 9);
+        for (i = 0; i < FISH; i++) {
+            g->fish_y[i] = 0;           /* DAT_00449260 */
+            g->fish_vx[i] = 0;          /* DAT_00446514; x is left as it was */
+        }
+        g->tick5 = 0;
+        g->wob = 0;
+        g->staff_step = 0;
+        g->staff_line = 0;
+        g->draw = DRAW_MENU;            /* FUN_004148f0(&LAB_0040118b, 1) */
+        g->draw_new = 1;
+        plat_bgm(1, "bgm02");
+        g->demo = 0;
+        /* DAT_00449284 = 0x708 goes in here as well, and nothing in the
+         * binary ever decrements it; the attract timeout that works is the
+         * menu's own DAT_004bf16c. */
+    }
+
+    /* every fifth frame the water and the title picture move a pixel */
+    if (++g->tick5 > 4) {
+        g->tick5 = 0;
+        g->wob ^= 1;
+    }
+
+    /* the sky: one row of sky01, hung so its bottom lands on the water */
+    p = vid_pat_info(v, EXT_BASE + 5);
+    step = p ? p->w : 0;
+    if (step > 0)
+        for (x = 0x20; x < 0x260; x += step)
+            vid_pat(v, x, 0x2a - p->h, EXT_BASE + 5);
+
+    /* the water: sea01 on the surface, then sea02, sea02, sea03 down to the
+     * sea bed.  The band index picks the tile, and the step is the height of
+     * whichever tile was just drawn. */
+    p = vid_pat_info(v, EXT_BASE);
+    step = p ? p->w : 0;
+    if (step > 0)
+        for (x = 0x20; x < 0x260; x += step) {
+            vid_pat(v, x, g->wob + 0x29, EXT_BASE);
+            band = 0;
+            y = p->h + 0x29;
+            while (y < 0x160) {
+                const DarPat *q;
+                n = EXT_BASE + 1;
+                if (band == 2) n = EXT_BASE + 2;
+                else if (band == 3 || band == 4) n = EXT_BASE + 3;
+                vid_pat(v, x, y, n);
+                q = vid_pat_info(v, n);
+                if (!q || q->h <= 0) break;
+                y += q->h;
+                band++;
+            }
+        }
+
+    /* the sea bed, out of depth.dar */
+    for (x = 0x20; x < 0x260; x += 0x10) {
+        vid_pat(v, x, 0x160, 0x9ba);
+        vid_pat(v, x, 0x170, 0x9bf);
+        vid_pat(v, x, 0x180, 0x9bf);
+        vid_pat(v, x, 400, 0x9b9);
+    }
+    for (x = 0x20; x < 0x260; x += 0x20)
+        vid_pat(v, x, 0x141, 0x9d3);
+
+    /* nine slots of something swimming past.  One in ten frames a free slot
+     * starts one off: a lane out of seven, an edge to come in from, and one
+     * to eight pixels a frame away from that edge.  Note the first random
+     * number is drawn for every slot whether it is free or not. */
+    for (i = 0; i < FISH; i++) {
+        if (game_rand(g) % 10 == 0 && g->fish_y[i] == 0) {
+            int dir;
+            g->fish_y[i] = (game_rand(g) % 7) * 0x18 + 0x40;
+            x = (game_rand(g) % 2) * 0x280 - 0x20;
+            g->fish_x[i] = x;
+            dir = 0x140 - x > 0 ? 1 : (0x140 - x < 0 ? -1 : 0);
+            g->fish_vx[i] = (game_rand(g) % 8 + 1) * dir;
+        }
+        n = g->fish_x[i] + g->fish_vx[i];
+        if (n < -0x1f || n > 0x25f) g->fish_y[i] = 0;
+    }
+    /* only the lanes below 99 are drawn, so the top two of the seven never
+     * show - they would be above the water */
+    for (i = 0; i < FISH; i++)
+        if (g->fish_y[i] > 99)
+            vid_pat(v, g->fish_x[i], g->fish_y[i],
+                    g->fish_vx[i] < 0 ? 0xa1e : 0xa1d);
+    for (i = 0; i < FISH; i++)
+        g->fish_x[i] += g->fish_vx[i];
+
+    vid_pat(v, 0x120, g->wob + 0x10, 0xa05);
+
+    /* the staff line scrolls in 16 pixels a frame, waits 0x32 frames, and
+     * scrolls out; then the next of the eight. */
+    switch (g->staff_step) {
+    case 0:
+        g->staff_step++;
+        g->staff_col = 0x50;
+        break;
+    case 1:
+        g->staff_col -= 2;
+        if (g->staff_col == 4) {
+            g->staff_step++;
+            g->staff_wait = 0x32;
+        }
+        break;
+    case 2:
+        if (--g->staff_wait < 1) g->staff_step++;
+        break;
+    case 3:
+        g->staff_col -= 2;
+        if (g->staff_col < -0x4a) {
+            g->staff_step = 0;
+            if (++g->staff_line > 7) g->staff_line = 0;
+        }
+        break;
+    }
+    vid_text_at(v, g->staff_col, 0x178, GAME_STAFF[g->staff_line], FNT_WHITE);
+
+    /* (*DAT_004bf164)() - the overlay hook, which is the menu here. */
+    if (g->draw == DRAW_MENU) hook_menu(g);
+}
+
+/* case 0x5a: two lines of small print and PostQuitMessage(0).  There is
+ * nothing to quit in a browser, so the flag is all the port does. */
+static void st_version(Game *g)
+{
+    vid_text8_at(g->v, 5, 4, "Super Depth ver1.00a Copyright(c)1991 "
+                             "Hideki Mori and Yasuo Futatsugi");
+    vid_text8_at(g->v, 5, 5, "alty & tacox / Bio_100%");
+    g->quit = 1;
+}
+
 /* Not the original: a note on the screen for the states that are still to be
  * ported, so the page says which one it is sitting in. */
 static void st_todo(Game *g)
@@ -190,6 +464,8 @@ static void frame(Game *g)
     case ST_BOOT:  st_boot(g); break;
     case ST_LOGO0:
     case ST_LOGO:  st_logo(g); break;
+    case ST_TITLE: st_title(g); break;
+    case ST_VERSION: st_version(g); break;
     default:       st_todo(g); break;
     }
 

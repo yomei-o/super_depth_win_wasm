@@ -43,9 +43,11 @@
 <div id="status">読み込み中…</div>
 <div id="diag"></div>
 <div class="keys" style="max-width:60em">
-  <b>まだ移植中です。</b>いま動くのは Bio_100% のロゴ（状態 0x10）まで。
-  ロゴが消えると次の状態 0x1e —— 海のタイトル —— に入りますが、そこは
-  まだ移植していないので画面に「not ported yet」と出ます。
+  <b>まだ移植中です。</b>いま動くのは Bio_100% のロゴ（0x10）と海の
+  タイトル（0x1e）—— メニュー、スタッフの流れる字、泳ぐ潜水艦まで。
+  <kbd>Z</kbd> で選ぶと Game Start は状態 0x32、Record は記録画面に
+  進みますが、そこから先はまだ移植していないので画面に
+  「not ported yet」と出ます。1 分放っておくとデモ（0x33）に移ります。
   <kbd>1</kbd><kbd>2</kbd> は原作から取り出した絵の展示で、これは移植の
   ついでに作ったものです。
   <a href="https://github.com/yomei-o/super_depth_win_wasm">ソースと解析メモ</a>
@@ -101,6 +103,7 @@ function ensurePump() {
   musGain.gain.value = 1;
   musGain.connect(actx.destination);
   Module._sd_audio_init(actx.sampleRate);
+  loadSe();
   musNext = 0;
   musTimer = setInterval(musPump, MUS_TICK);
   musPump();
@@ -127,6 +130,35 @@ function musPump() {
   }
 }
 
+// The sound effects are plain RIFF WAVs sitting in disk/, which the game asks
+// for by name (FUN_0041fd00).  The module hands the name over through
+// sd_se_take(); the browser decodes the file once and keeps the buffer.
+const SE_NAMES = ['drop', 'burn', 'eneshot', 'item', 'depth01', 'depth02',
+                  'depth03', 'depth04', 'depth05', 'depth06', 'finalt09'];
+const seBuf = {};
+
+function loadSe() {
+  if (!actx) return;
+  for (const n of SE_NAMES) {
+    if (seBuf[n] !== undefined) continue;
+    seBuf[n] = null;
+    fetch('disk/' + n + '.wav')
+      .then(r => r.arrayBuffer())
+      .then(a => actx.decodeAudioData(a))
+      .then(b => { seBuf[n] = b; })
+      .catch(() => { seBuf[n] = null; });
+  }
+}
+
+function playSe(name) {
+  const b = seBuf[name];
+  if (!actx || !b) return;
+  const src = actx.createBufferSource();
+  src.buffer = b;
+  src.connect(actx.destination);
+  src.start();
+}
+
 var Module = {
   onRuntimeInitialized() {
     if (Module._sd_init() !== 0) {
@@ -144,6 +176,8 @@ var Module = {
     setInterval(() => {
       Module._sd_set_pad(pad);
       Module._sd_tick();
+      const se = Module._sd_se_take();
+      if (se) playSe(Module.UTF8ToString(se));
       const p = Module._sd_framebuffer();
       img.data.set(Module.HEAPU8.subarray(p, p + w * h * 4));
       ctx2d.putImageData(img, 0, 0);

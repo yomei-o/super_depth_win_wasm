@@ -17,7 +17,8 @@ EMCC="$EMSDK/upstream/emscripten/emcc.exe"
 EXPORTS=_main,_sd_init,_sd_tick,_sd_width,_sd_height,_sd_framebuffer
 EXPORTS=$EXPORTS,_sd_patterns,_sd_view,_sd_set_view,_sd_song,_sd_set_song
 EXPORTS=$EXPORTS,_sd_set_bgm,_sd_audio_init,_sd_audio,_sd_audio_left
-EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_state,_sd_fps
+EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_state
+EXPORTS=$EXPORTS,_sd_fps,_sd_se_take
 
 EMBED="--embed-file disk/depth.dar@/disk/depth.dar"
 for n in staff depth1 depth2 space ending; do
@@ -31,7 +32,7 @@ done
    -o superdepth.js \
    src/main_wasm.c src/game.c src/video.c src/dar.c src/smf.c src/synth.c \
    $EMBED \
-   -s MODULARIZE=0 -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF32 \
+   -s MODULARIZE=0 -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF32,UTF8ToString \
    -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web,node \
    -s EXPORTED_FUNCTIONS="$EXPORTS"
 echo "built superdepth.js + superdepth.wasm"

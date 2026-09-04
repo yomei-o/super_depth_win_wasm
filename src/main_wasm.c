@@ -73,6 +73,27 @@ void plat_bgm(int mode, const char *name)
     music_apply();
 }
 
+/* FUN_0041fd00(name): play one of the sound effects, which are plain RIFF
+ * WAVs sitting next to the page in disk/.  The module has no way to make a
+ * sound of its own, so the name is left here and the page picks it up. */
+static char g_se[64];
+
+void plat_se(const char *name)
+{
+    strncpy(g_se, name, sizeof g_se - 1);
+    g_se[sizeof g_se - 1] = 0;
+}
+
+EMSCRIPTEN_KEEPALIVE const char *sd_se_take(void)
+{
+    static char out[64];
+
+    if (!g_se[0]) return 0;
+    strcpy(out, g_se);
+    g_se[0] = 0;
+    return out;
+}
+
 /* ---- the surface ------------------------------------------------------ */
 
 static void expand(void)
