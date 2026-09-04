@@ -228,7 +228,8 @@ void staff_frame(Game *g);              /* FUN_00414210 */
 /* The debug menu's commands (the MENU resource the release build drops),
  * by the resource's own ids.  Answers non-zero when the command was one of
  * them.  See the head of src/ending.c. */
-enum { DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,
+enum { MENU_RESET = 0x860,              /* this one is in both menus */
+       DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,
        DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
        DBG_STAGE04 = 0x851, DBG_STAGE05 = 0x852, DBG_STAGE06 = 0x853,
        DBG_FULLPOWER = 0x85f,

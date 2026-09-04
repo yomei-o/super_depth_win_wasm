@@ -780,6 +780,10 @@ int game_debug(Game *g, int cmd)
     int stage = 0, hook = 0, i;
 
     switch (cmd) {
+    case MENU_RESET:                    /* 0x4260f7, ゲーム -> リセット */
+        plat_bgm(4, "");                /* the name is only read to play */
+        game_set_state(g, ST_BOOT);
+        return 1;
     case DBG_BOX_ON:                    /* 0x4262ca */
         g->boxes = 1;
         return 1;

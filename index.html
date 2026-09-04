@@ -79,6 +79,7 @@
     命令を受ける側（<code>0x426100</code> からの WM_COMMAND）はそのまま
     残っているので、同じ番号で同じことをします。
     <b>エンディングとスタッフロールはここからしか出ません。</b>
+    リセットだけは製品版のメニューにもあります。
   </div>
   <div id="dbg"></div>
 </details>
@@ -326,6 +327,7 @@ addEventListener('keyup', e => {
 });
 // The debug menu's own ids, out of the MENU resource.
 const DBG = [
+  ['リセット', 0x860], ['gap', 0],
   ['Bio_100% ロゴ', 0x86d], ['タイトル画面', 0x86e],
   ['エンディング', 0x86f], ['スタッフロール', 0x870], ['gap', 0],
   ['STAGE 01', 0x84e], ['STAGE 02', 0x84f], ['STAGE 03', 0x850],

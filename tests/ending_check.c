@@ -208,6 +208,13 @@ int main(void)
     game_debug(&game, DBG_FULLPOWER);
     ok(p->speed > 0 && p->charges > 0, "full power fills the ship up");
 
+    /* ---- リセット (0x860), which the release menu has as well -------- */
+    ok(game_debug(&game, MENU_RESET) == 1, "reset is one of ours");
+    ok(game.state == ST_BOOT, "and it goes back to the start");
+    ok(bgm_mode_last == 4, "with the music stopped (mode 4)");
+    game_tick(&game);
+    ok(game.state == ST_LOGO, "which runs into the logo again");
+
     /* ---- the collision boxes (0x84c / 0x84d) ------------------------ */
     to_title();
     game_set_pad(&game, PAD_BTN1);      /* Game Start */

@@ -410,12 +410,18 @@ static void space_enemy(Game *g, int i)
     case 3:
         if (e->x > 0 && e->x < 0x260 && game_rand(g) % 300 == 0) {
             int bx, by;
+            /* Both halves of the x add DAT_00461340 - the ship's step this
+             * frame - so the shot leads the target.  Only the sea and air
+             * stages ever write it, so what the space stage adds is the step
+             * the stage before it left behind.  The y adds DAT_0046133c the
+             * same way, and NOTHING in the binary ever writes that one: it
+             * sits in .data as a zero, so the aim only leads sideways. */
             d = p->px - e->x;
             if (absi(d + 0x20) < 0x21) {
-                bx = game_rand(g) % 2 - 2;
+                bx = game_rand(g) % 2 - 2 + p->pdx;
             } else {
                 s = sgn(d);
-                bx = (game_rand(g) % 2 + 2) * s;
+                bx = (game_rand(g) % 2 + 2) * s + p->pdx;
             }
             d = p->py - e->y;
             if (absi(d + 0x20) < 0x21) {
