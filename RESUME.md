@@ -483,7 +483,25 @@ Flash Bomb / Shot Special / Full Power / Ship 1up。
 
 **移植としては一通り終わっている。** 原作の画面はぜんぶ動き、原作の
 録画も最後まで通る。残っているのは「まだ無いもの」に挙げた SOUND TEST
-だけで、それは入口が binary 中に無いので入れない。手を入れるなら:
+だけで、それは入口が binary 中に無いので入れない。
+
+**2026-09-05 に user がページで遊んで出た 2 件**（どちらも対処済み）:
+
+1. **2 面をクリアするとタイトルに戻る** —— `--embed-file` に
+   `disk/stage3.bin` が無く、宇宙の面が台本を読めずに原作どおり
+   タイトルへ落ちていた（`FUN_0040f970` の `0x40f9bb: PUSH 0x1e`）。
+   native の検査は `disk/` を直に読むので通っていた。**ビルドが
+   足りないファイルを見つけて止まるようにした**（`tools/build_wasm.sh`
+   の頭で `game_scene` / `plat_read` / `plat_bgm` の名前を grep して
+   EMBED と突き合わせる）
+2. **デモに入るとキーが効かない** —— 原作もデモ再生中は **Esc だけ**
+   受ける（START は録画中だけ）。連鎖を直してデモが 8235 フレーム
+   （4 分半）最後まで流れるようになったので余計に長く感じる。
+   ページにキーの説明と「デモ再生中… Esc で戻ります」を出し、
+   focus が外れたら pad を空にし、毎フレームの外部呼び出しを try で
+   囲った（音や保存が断られてもループが死なないように）
+
+手を入れるなら:
 
 * デモの録画をページから使いやすくする（いまはダウンロード）
 
@@ -723,6 +741,30 @@ kind 0x14 / 0x15 を置く。** つまり 1..12 が敵の機体、0x14 以降が
   認識しない）。ここから読める対応が
   **1/5/9 = 海、2/6/10 = 空、3/7/11 = 宇宙、4/8/12 = 4 面**。
   `DAT_00462198`（= (面-1)%4+1）の 4 周期はこれ
+
+## ブラウザの側を確かめる（headless Chrome、この機械で確認済み）
+
+**native の検査が全部通っていてもページだけ壊れていることがある。**
+ページを実際に開いた絵を撮れるので、疑ったら撮る:
+
+```sh
+cd /c/prog/claude/super_depth_win_wasm
+(python -m http.server 8731 >/dev/null 2>&1 &)
+"/c/Program Files/Google/Chrome/Application/chrome.exe" \
+    --headless=new --disable-gpu --no-sandbox \
+    --window-size=1280,1000 --virtual-time-budget=12000 \
+    --screenshot="C:\prog\claude\super_depth_win_wasm\tmp\page.png" \
+    "http://localhost:8731/index.html"
+```
+
+* **`--screenshot` は Windows の絶対パスで渡す**（相対だと
+  「指定されたパスが見つかりません」で書けない）
+* `--virtual-time-budget` のミリ秒だけページを走らせてから撮る。
+  12000 でタイトルが動いている絵になる
+* GUI の窓は開かない。音は出ない（`ensureContext` はキーか
+  クリックで初めて呼ばれるので、headless では AudioContext を作らない）
+
+これで見つけたもの: 本文に markdown の `**` が残っていた
 
 ## 取扱説明書（`disk/index.html`）—— 作者自身が書いた仕様
 
