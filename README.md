@@ -34,10 +34,11 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
       つまり移植の基準になる道は GDI のほうで、これは canvas に素直に乗る
 * [x] Ghidra で解析（`out/superdepth.c` 587 関数、`out/superdepth.asm`
       47311 命令。`out/` は clone に入らないので RESUME の手順で作り直す）
-* [x] **`.dar`（パターンの書庫）の読みかた** — `FUN_00419700` そのままで
-      6 本とも末尾にぴったり着く（`python tools/dar.py disk/depth1.dar`）。
-      素の 8bpp は PNG に描けている（海のタイル、Bio_100% のロゴ）。
-      1 画素 1 バイトでない種類が残っている（[docs/format.md](docs/format.md)）
+* [x] **`.dar`（パターンの書庫）** — `FUN_00419700` と `FUN_0041a590` の
+      とおりに読める。6 本とも末尾にぴったり着き、**画素は「透明の数・
+      不透明の数・画素（4 の倍数に詰める）」の走の並び**。海のタイル、
+      Bio_100% のロゴ、DEPTH のロゴ、惑星、背景まで PNG に描けた
+      （`python tools/dar.py disk/staff.dar sheet.png`）
 * [ ] `stage3.bin`（"SDEPTH"）の面データ
 * [ ] WinGL（本体の描画層）の移植
 * [ ] 音（WAV は素の RIFF、BGM は SMF。ブラウザで MIDI をどう鳴らすかは未定）

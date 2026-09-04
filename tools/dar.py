@@ -63,12 +63,63 @@ def load(path):
         name = ''
         if hlen > 15:
             nl = d[head + 14]
-            name = bytes(d[head + 15:head + 15 + nl]).rstrip(b'\0').decode('latin1')
+            # the length byte counts itself, so the string is nl - 1
+            raw = bytes(d[head + 15:head + 14 + nl]).rstrip(b'\0')
+            name = raw.decode('cp932', 'replace')
         px = head + hlen
         pats.append({'name': name, 'w': w, 'h': h, 'stride': stride,
                      'at': at, 'hlen': hlen, 'px': px})
         at = head + hlen + h * stride
     return d, pal, pats, at
+
+
+def rows(d, pat):
+    """The pattern's pixels, one list a row, None where it is transparent.
+
+    A row is a list of runs, each of them
+
+        dword   the transparent count in the LOW word,
+                the opaque count in the HIGH word
+        byte    the opaque pixels, padded to a multiple of four
+
+    which is exactly what FUN_0041a590 writes when it builds a run list out of
+    a bitmap: `*param_2 = opaque << 0x10 | transparent & 0xffff`, and the next
+    run lands at `local_18 + (opaque + 7 & 0xfffffffc)` - so a run costs
+    4 + align4(opaque) bytes.  Miss that padding and everything after the
+    first run whose length is not a multiple of four slides sideways.
+
+    A row's runs together cover the width; `stride` is how many bytes the file
+    gives each row.
+    """
+    w, h, stride, at = pat['w'], pat['h'], pat['stride'], pat['px']
+    out = []
+    for y in range(h):
+        px = [None] * w
+        q = at + y * stride
+        end = q + stride
+        x = 0
+        while x < w and q + 4 <= end:
+            pair = struct.unpack_from('<I', d, q)[0]
+            q += 4
+            x += pair & 0xffff                    # the transparent run
+            run = pair >> 16
+            for i in range(run):
+                if 0 <= x < w and q + i < len(d):
+                    px[x] = d[q + i]
+                x += 1
+            q += (run + 3) & ~3                   # padded to four
+        out.append(px)
+    return out
+
+
+def draw(d, pal, pat, back=(255, 0, 255)):
+    from PIL import Image
+    im = Image.new('RGB', (pat['w'], pat['h']), back)
+    for y, row in enumerate(rows(d, pat)):
+        for x, v in enumerate(row):
+            if v is not None:
+                im.putpixel((x, y), pal[v])
+    return im
 
 
 def main():
@@ -83,15 +134,10 @@ def main():
                   % (i, p['name'], p['w'], p['h'], p['stride'], p['hlen'], p['at']))
         return
 
-    from PIL import Image
     out = sys.argv[2]
     if len(sys.argv) > 3:
         p = pats[int(sys.argv[3])]
-        im = Image.new('RGB', (p['w'], p['h']))
-        for y in range(p['h']):
-            for x in range(p['w']):
-                im.putpixel((x, y), pal[d[p['px'] + y * p['stride'] + x]])
-        im.save(out)
+        draw(d, pal, p).save(out)
         print('%s -> %s (%dx%d %s)' % (path, out, p['w'], p['h'], p['name']))
         return
 
@@ -99,13 +145,12 @@ def main():
     cols = 10
     cw = max(p['w'] for p in pats) + 2
     ch = max(p['h'] for p in pats) + 2
-    rows = (len(pats) + cols - 1) // cols
-    im = Image.new('RGB', (cols * cw, rows * ch), (40, 40, 40))
+    nrows = (len(pats) + cols - 1) // cols
+    from PIL import Image
+    im = Image.new('RGB', (cols * cw, nrows * ch), (40, 40, 40))
     for i, p in enumerate(pats):
         ox, oy = (i % cols) * cw + 1, (i // cols) * ch + 1
-        for y in range(p['h']):
-            for x in range(p['w']):
-                im.putpixel((ox + x, oy + y), pal[d[p['px'] + y * p['stride'] + x]])
+        im.paste(draw(d, pal, p, (40, 40, 40)), (ox, oy))
     im.save(out)
     print('%s -> %s (%d patterns)' % (path, out, len(pats)))
 
