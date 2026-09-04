@@ -249,6 +249,42 @@ int main(void)
     ok(game.state == ST_DEMO, "0x708 idle frames hand over to the demo");
     ok(t >= 0x708 && t <= 0x709, "which is 1800 frames, not sooner");
 
+    /* While it plays, the pad belongs to the recording: the original reads
+     * only Esc (FUN_00405c10's tail - the START key answers while a
+     * recording is being made, not while one is played back). */
+    for (t = 0; t < 100; t++) game_tick(&game);
+    tap(PAD_BTN1);
+    ok(game.state == ST_DEMO, "Z does not stop the demo");
+    tap(PAD_START);
+    ok(game.state == ST_DEMO, "and neither does the start button");
+    tap(PAD_ESC);
+    ok(game.state == ST_LOGO, "Esc does, back to the logo");
+    game_tick(&game);                   /* the logo's first frame clears it */
+    ok(game.demo == 0, "and the pad belongs to the player again");
+
+    /* Which is the whole point: the keys have to work after a demo. */
+    run_to(ST_TITLE, 400);
+    ok(game.state == ST_TITLE, "the logo hands back to the title");
+    ok(game.menu_cur == 0, "with the menu on Game Start");
+    tap(PAD_DOWN);
+    ok(game.menu_cur == 1, "Down moves the menu after a demo");
+    tap(PAD_UP);
+    ok(game.menu_cur == 0, "and Up moves it back");
+    tap(PAD_BTN1);
+    game_tick(&game);
+    ok(game.state == ST_PLAY, "and Z starts a game");
+
+    /* The recording runs out on its own too - four and a half minutes of
+     * it - and that has to leave the keys working as well. */
+    game_init(&game, &vid);
+    run_to(ST_TITLE, 400);
+    for (t = 0; t < 0x70a && game.state == ST_TITLE; t++) game_tick(&game);
+    for (t = 0; t < 12000 && game.state == ST_DEMO; t++) game_tick(&game);
+    ok(game.recat == game.reclen, "the demo plays the recording out");
+    ok(game.state == ST_LOGO, "and that ends it at the logo");
+    game_tick(&game);
+    ok(game.demo == 0, "with the pad back");
+
     if (fails) { printf("%d checks failed\n", fails); return 1; }
     printf("title checks passed  (tmp/title_menu.png, tmp/title_exit.png)\n");
     return 0;
