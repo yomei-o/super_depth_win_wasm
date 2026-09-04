@@ -131,7 +131,7 @@ tmp/sd_shot.exe list  disk/depth.dar                 名前と大きさ
 | `stage3.bin` | 6632。"SDEPTH" で始まる **3 面（宇宙）の台本**。`FUN_00413df0` が読む |
 | `bgm01`..`bgm15.mid`, `finst1.mid` | BGM（SMF）。`finst1` はスタッフロール。表にある `finend2` だけ入っていない |
 | `*.wav` | 効果音（RIFF）。表にある `plane` だけ入っていない |
-| `depth2..5.jpg`, `ielike.gif`, `index.html` | HTML マニュアル |
+| `depth2..5.jpg`, `ielike.gif`, `index.html` | HTML の取扱説明書。**作者自身が書いた仕様なので裏を取るのに使える** —— アイテムの色と中身、「海面と空面では横移動しかできません」、「全12面をクリアーするとエンディング…でも現在は４面までしか遊べません」 |
 | `demo1.dat` | デモの記録（1 フレーム 1 バイト） |
 | `ipatcfg.exe`, `ipatinfo.txt`, `readme.txt` | オンラインアップデート関係と説明 |
 
