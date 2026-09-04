@@ -160,6 +160,41 @@ function png(w, h, rgba) {
     console.log('(no ' + want + ', skipping the native comparison)');
   }
 
+  // The debug menu's commands go through the same export the page's
+  // buttons use, and the page's own script has to parse.
+  Module._sd_init();
+  ok(Module._sd_debug(0x86f) === 1, 'the ending command is taken');
+  Module._sd_tick();
+  ok(Module._sd_state() === 0x32, 'and it puts the game in state 0x32');
+  ok(Module._sd_debug(0x123) === 0, 'an unknown command is not');
+  ok(Module._sd_music_on() === 1 && Module._sd_se_on() === 1 &&
+     Module._sd_stereo() === 1, 'the three options start on');
+  Module._sd_debug(0x85d);
+  ok(Module._sd_music_on() === 0, 'and 音楽 turns the music off');
+  Module._sd_debug(0x85d);
+  {
+    const html = fs.readFileSync(path.resolve(__dirname, '../index.html'),
+                                 'utf8');
+    const m = html.match(/<script>([\s\S]*?)<\/script>/);
+    ok(!!m, 'index.html has its script');
+    if (m) {
+      let bad = null;
+      try { new Function(m[1]); } catch (e) { bad = e.message; }
+      ok(bad === null, 'and it parses (' + bad + ')');
+      // every id the buttons send must be one the module answers
+      const list = m[1].match(/const DBG = \[([\s\S]*?)\];/);
+      ok(!!list, 'and the debug menu is in it');
+      if (list) {
+        const ids = [...list[1].matchAll(/0x8[0-9a-f]{2}/g)]
+          .map(x => parseInt(x, 16));
+        ok(ids.length > 15, 'with all its buttons (' + ids.length + ')');
+        const unknown = ids.filter(id => Module._sd_debug(id) !== 1);
+        ok(unknown.length === 0, 'and every button id is a command (' +
+           unknown.map(x => x.toString(16)).join(' ') + ')');
+      }
+    }
+  }
+
   if (fails) { console.log(fails + ' checks failed'); process.exit(1); }
   console.log('wasm checks passed');
 })();
