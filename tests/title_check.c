@@ -162,6 +162,31 @@ int main(void)
     ok(game.draw == DRAW_RECORD, "and arms the record overlay");
     ok(game.state == ST_TITLE, "while the title stays up");
 
+    /* The score table overlay: the header, ten rows of defaults, and the
+     * blinking line at the bottom. */
+    game_tick(&game);
+    ok(ink(0x50, 0x20, 0x260, 0x40) > 1000, "the ranking header is drawn");
+    ok(ink(0x50, 0x60, 0x260, 0x110) > 8000, "and the ten rows under it");
+    shot("tmp/title_record.png");
+    {   /* "Hit any key to return." shows for eight frames out of sixteen.
+         * The yellow font draws in colour 251 and nothing else on the screen
+         * uses it, so counting that one index finds the line. */
+        int on = 0, off = 0, k, x, y, n;
+        for (k = 0; k < 16; k++) {
+            game_tick(&game);
+            for (y = 0x140, n = 0; y < 0x150; y++)
+                for (x = 0x90; x < 0x1f0; x++)
+                    if (vid.px[y][x] == 251) n++;
+            if (n > 200) on++; else off++;
+        }
+        ok(on == 8 && off == 8, "the return line blinks eight frames in sixteen");
+    }
+    se_last[0] = 0;
+    tap(PAD_BTN1);
+    ok(game.draw == DRAW_MENU, "BTN1 goes back to the menu");
+    ok(!strcmp(se_last, "depth01"), "with the same sound");
+    ok(game.menu_cur == 1, "and the cursor is still on Record");
+
     /* Game Start hands over to state 0x32 with the play routine armed. */
     game_init(&game, &vid);
     ok(run_to(ST_TITLE, 400) > 0, "the logo reaches the title again");

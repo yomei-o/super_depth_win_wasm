@@ -12,8 +12,12 @@ user の依頼: 「super depth の windows 版を ghidra で解析して wasm �
 
 * `python tools/unpack.py` で **45 ファイルが `disk/` に出る**（三層とも
   解いてある。[docs/format.md](docs/format.md)）。インストーラは走らせない
-* Ghidra 12.1.3 で `disk/superdepth.exe` を解析済み。作り直しは下記
-* `out/superdepth.c` 587 関数（**落ちた関数は 0**）、
+* Ghidra 12.1.3 で `disk/superdepth.exe` を解析済み。作り直しは下記。
+  **`MakeThunkFuncs.java` を先に流すこと** —— 0x401005 の JMP 表の
+  飛び先は誰も直接呼んでいない（関数ポインタ経由）ので、素の解析では
+  関数にならず C に出てこない（メニューの `FUN_00414920` と
+  記録画面の `FUN_00414b00` がそれだった）
+* `out/superdepth.c` 606 関数（**落ちた関数は 0**）、
   `out/superdepth.asm` 47311 命令。32bit の MSVC なので**逆コンパイルの
   質がとても良い** —— PC-98 の 16bit とは別世界で、ほぼそのまま読める
 * **`.dar` は読める**（`src/dar.c`、検査つき）。**描画層もある**
@@ -23,11 +27,12 @@ user の依頼: 「super depth の windows 版を ghidra で解析して wasm �
 * **状態機械が動く**（`src/game.c`）。0x0a → 0x10（Bio ロゴ）→ 0x1e
   （海のタイトル、メニュー・スタッフの流れる字・泳ぐ潜水艦）→
   Game Start で 0x32、放置 1 分でデモ（0x33）、Exit で 0x5a。
+  Record で記録画面（`FUN_00414b00`）。
   検査は `tmp/logo_check.exe` と `tmp/title_check.exe`（PNG も出る）
 * **WASM とページもある**（`index.html` / `superdepth.js`）。ゲームが
   そのまま動き、`0`/`1`/`2` で展示画面にも切り替わる:
   https://yomei-o.github.io/super_depth_win_wasm/
-* **記録画面（FUN_00414b00）と 0x32 から先は未移植。** 下に書いた
+* **状態 0x32 から先（ゲーム本体）は未移植。** 下に書いた
 
 ## 本体の見取り（`disk/superdepth.exe`）
 
@@ -175,6 +180,33 @@ DAT_004bf810[0xd7] を DAT_004bfc18 へ複写   ★前フレームの入力（�
 決定の判定は **BTN1 を先に見て、押されていなければ START を見る**。
 どちらも乱数を 1 個捨てるので、順番を変えると乱数列がずれる。
 
+### 記録画面（`FUN_00414b00`）と得点表
+
+得点表は `DAT_004bf9dc` から **0x28 バイト x 10 本**:
+
+| | |
+|---|---|
+| +0x00 | 得点（表示は `"%05d0"` なので 10 倍して見せる） |
+| +0x04 | 名前 char[16] |
+| +0x14 | 日付 char[16] |
+| +0x24 | 面（`"%02d"`） |
+
+1 本がそのままレジストリの 1 値（`HKCU\Software\Bio_100%\SuperDepth`
+の `rank%d`、`FUN_004026f0` が 0x28 バイトを丸ごと読み書き）。
+既定は `FUN_00402610`: 得点 100,90,..,10 / 名前 "Bio_100%" /
+日付 "--/--/--" / 面 1。
+
+画面（`FUN_00414b00`）は見出しを赤（0x280）で、表を白（0x180）で書く。
+見出しの `" ** Score ****  Name     Date   "` は**実行時に 1,2 と
+10..13 の `*` を字 0x15..0x1a に差し替える** —— その字は
+「Ra」「nk」「St」「ag」… と 2 文字分が 1 枚に入っている。
+行は `FUN_0040bbb0`: 順位の数字（`0x30+順位`、10 位だけ 0x14）と
+0x10..0x13 の飾り（3 位までで止まる）、得点・面・名前・日付。
+下の `"Hit any key to return."` は `frame & 0xf` が 8 未満のとき。
+戻りは **BTN1 の生のエッジ**（`FUN_00402de0` を通らないので乱数を
+捨てない）。`FUN_004148f0(&LAB_0040118b, 0)` の **0** が効いて、
+戻ったメニューはカーソルを覚えている。
+
 ### 効果音の名前表（`PTR_DAT_0044277c`）
 
 `FUN_0041fd00(name)` はこの 12 本から名前で引く:
@@ -204,9 +236,9 @@ SOUND TEST が `(1, bgm%02d)`。**モードのどれが loop なのかは SMFDrv
    `rand()`（種は 1 固定なので毎回同じ順）
 6. ~~状態 0x1e（海のタイトル）~~ 済み（`src/game.c`、`tests/title_check.c`）。
    メニュー（`FUN_00414920`）と タイル組み立てのロゴ（`FUN_00402800`）も
-7. **記録画面（`FUN_00414b00`）**。メニューの Record から入る。
-   レジストリ `Software\Bio_100%\SuperDepth` の `rank%d` を読む所と、
-   `"Super Depth Top Score Ranking"` / `"rankin = %d rcurX = %02d"`
+7. ~~記録画面（`FUN_00414b00`）~~ 済み。得点の保存（レジストリの代わりに
+   ページの localStorage）と `"rankin = %d rcurX = %02d"` の名前入力は
+   まだ —— 点が入る所（本体）と一緒にやること
 8. **`stage3.bin`** の 24 バイトレコードの意味（`FUN_00413df0` の
    switch が kind 0..3 を runtime の型 0/1/2/3/0x32 に写す所から）
 9. **ゲーム本体**。状態 0x32..0x35 の先（`FUN_00405c10` が毎フレーム
@@ -228,6 +260,8 @@ mkdir -p ghidra_proj out
 cmd //c "$GH" ghidra_proj sd -import disk/superdepth.exe -overwrite     # 50 秒
 cmd //c "$GH" ghidra_proj sd -process superdepth.exe -noanalysis \
     -scriptPath tools/ghidra -postScript DumpAsm.java out/superdepth.asm
+cmd //c "$GH" ghidra_proj sd -process superdepth.exe -noanalysis \
+    -scriptPath tools/ghidra -postScript MakeThunkFuncs.java   # 表の飛び先
 cmd //c "$GH" ghidra_proj sd -process superdepth.exe -noanalysis \
     -scriptPath tools/ghidra -postScript DumpAll.java out/superdepth.c
 ```

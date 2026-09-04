@@ -54,6 +54,18 @@ enum {
 #define LOGO_ROWS 0xb8                  /* DAT_0044653c, one int a pixel row */
 #define FISH 9                          /* DAT_00449260, the title's swimmers */
 
+/* The top score table at DAT_004bf9dc: ten records of 0x28 bytes, each of
+ * them one registry value (`rank%d` under HKCU\Software\Bio_100%\SuperDepth,
+ * written whole by FUN_004026f0).  FUN_00402610 fills in the defaults. */
+#define RANKS 10
+
+typedef struct {
+    int score;                          /* +0x00, shown as "%05d0" */
+    char name[16];                      /* +0x04 */
+    char date[16];                      /* +0x14 */
+    int stage;                          /* +0x24, shown as "%02d" */
+} Rank;
+
 /* DAT_004492c8, the routine the play states call every frame.  The original
  * keeps a code pointer (one of the thunks at 0x401100); here it is an id. */
 enum { HOOK_NONE = 0, HOOK_PLAY = 1 };  /* LAB_00401168 -> FUN_00405c10 */
@@ -100,6 +112,8 @@ typedef struct {
     int menu_cur;                       /* DAT_004bf168, 0..2 */
     int menu_idle;                      /* DAT_004bf16c, 0x708 -> the demo */
     int quit;                           /* state 0x5a's PostQuitMessage */
+
+    Rank rank[RANKS];                   /* DAT_004bf9dc */
 } Game;
 
 /* The three lines of the title menu (DAT_00441d68) and the eight staff lines

@@ -292,6 +292,71 @@ static void hook_menu(Game *g)
     }
 }
 
+/* FUN_0040bb60 + FUN_0040bbb0: one line of the score table.  The caller
+ * passes the record's fields separately; here the record is to hand.
+ *
+ * The two patterns are glyphs out of the 16x16 white font: the rank's own
+ * digit (0x30 + rank, so '1'..'9', and 0x14 for the tenth) and one of the
+ * four markers at 0x10..0x13, which stop rising after the third place. */
+static void rank_row(Game *g, int rank)
+{
+    Video *v = g->v;
+    const Rank *r = &g->rank[rank - 1];
+    char line[64];
+    int row = rank + 5;
+    int y = row * 0x10;
+    int n = rank == 10 ? 0x14 : rank + 0x30;
+    int k = rank - 1;
+
+    if (k < 0) k = 0;
+    else if (k > 3) k = 3;
+
+    vid_pat(v, 0x50, y, FNT_WHITE + n);
+    vid_pat(v, 0x60, y, FNT_WHITE + 0x10 + k);
+    sprintf(line, "%05d0", r->score);
+    vid_text(v, 0x0f, row, line, FNT_WHITE);
+    sprintf(line, "%02d", r->stage);
+    vid_text(v, 0x1e, row, line, FNT_WHITE);
+    vid_text(v, 0x24, row, r->name, FNT_WHITE);
+    vid_text(v, 0x36, row, r->date, FNT_WHITE);
+}
+
+/* FUN_00414b00, the other overlay: the score table, on top of whatever state
+ * is running - which is the title, since that is where it is armed from.
+ *
+ * The header line is kept in the binary with asterisks where the decorated
+ * glyphs go, and patched at 1, 2 and 10..13 before it is drawn.  Leaving is a
+ * plain edge test on BTN1 rather than FUN_00402de0, so unlike everywhere else
+ * it does not burn a random number.
+ */
+static void hook_record(Game *g)
+{
+    Video *v = g->v;
+    char line[64];
+    int i;
+
+    if (g->draw_new) g->draw_new = 0;
+
+    vid_text(v, 10, 1, "Super Depth  Top Score Ranking", FNT_RED);
+    strcpy(line, " ** Score ****  Name     Date   ");
+    line[1] = 0x15; line[2] = 0x16;
+    line[10] = 0x17; line[11] = 0x18; line[12] = 0x19; line[13] = 0x1a;
+    vid_text(v, 8, 4, line, FNT_WHITE);
+    vid_text(v, 8, 5, "--------------------------------", FNT_WHITE);
+    vid_text(v, 8, 0x10, "--------------------------------", FNT_WHITE);
+
+    for (i = 1; i < 11; i++) rank_row(g, i);
+
+    if ((int)(g->frame % 0x10) < 8)
+        vid_text(v, 0x12, 0x12, "Hit any key to return.", FNT_YELLOW);
+
+    if (edge(g, PAD_BTN1)) {
+        plat_se("depth01");
+        g->draw = DRAW_MENU;            /* FUN_004148f0(&LAB_0040118b, 0) - */
+        g->draw_new = 0;                /* a 0, so the menu keeps its cursor */
+    }
+}
+
 /* case 0x1e: the sea title.  depth1.dar goes into the slots at 0xb47, so
  * 0xb47..0xb4a are sea01..sea04 and 0xb4c is sky01; the ground tiles below
  * are depth.dar's.  Everything is placed in the game's own coordinates, so
@@ -424,8 +489,10 @@ static void st_title(Game *g)
     }
     vid_text_at(v, g->staff_col, 0x178, GAME_STAFF[g->staff_line], FNT_WHITE);
 
-    /* (*DAT_004bf164)() - the overlay hook, which is the menu here. */
+    /* (*DAT_004bf164)() - the overlay hook: the menu, or the score table
+     * when the menu has handed over to it. */
     if (g->draw == DRAW_MENU) hook_menu(g);
+    else if (g->draw == DRAW_RECORD) hook_record(g);
 }
 
 /* case 0x5a: two lines of small print and PostQuitMessage(0).  There is
@@ -510,8 +577,20 @@ static void frame(Game *g)
 
 void game_init(Game *g, Video *v)
 {
+    int i;
+
     memset(g, 0, sizeof *g);
     g->v = v;
+    /* FUN_00402610's defaults for the score table.  The original then reads
+     * the registry over the top of them (FUN_004026f0); a browser has no
+     * registry, and nothing can score yet, so the defaults are all there is
+     * for now. */
+    for (i = 0; i < RANKS; i++) {
+        g->rank[i].score = 100 - i * 10;
+        strcpy(g->rank[i].name, "Bio_100%");
+        strcpy(g->rank[i].date, "--/--/--");
+        g->rank[i].stage = 1;
+    }
     g->seed = 1;                        /* FUN_00426912(1) in the app's init */
     g->state = ST_BOOT;                 /* FUN_00421da0(10), same place */
     g->entered = 1;
