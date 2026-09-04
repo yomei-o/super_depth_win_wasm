@@ -19,6 +19,7 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/sd_shot.exe   src/main_shot.c src/png.c $CORE
     $CC -o tmp/dar_check.exe tests/dar_check.c $CORE
     $CC -o tmp/unlib.exe     tools/unlib.c tools/blast.c -Itools
+    $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
 fi
 
 if [ "$what" = check ]; then
@@ -30,6 +31,8 @@ if [ "$what" = check ]; then
     ./tmp/sd_shot.exe pat   disk/staff.dar  tmp/depthlogo.png 1
     ./tmp/sd_shot.exe pat   disk/ending.dar tmp/earth.png 0
     ./tmp/sd_shot.exe text  disk/depth.dar  tmp/text.png
+    echo "== music"
+    ./tmp/midi2wav.exe disk/bgm01.mid tmp/bgm01.wav 10
 fi
 
 echo "-> tmp/"
