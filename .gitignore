@@ -1,0 +1,16 @@
+# the installer this all came out of: 2MB, and tools/unpack.py can redo it
+depth-build115.exe
+
+# Ghidra's project and its dumps - big, and remade by the recipe in RESUME.md
+ghidra_proj/
+out/
+
+# scratch
+tmp/
+*.o
+*.obj
+*.exe
+!disk/*.exe
+
+*.pyc
+__pycache__/
