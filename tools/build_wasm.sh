@@ -34,6 +34,29 @@ for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
 done
 EMBED="$EMBED --embed-file disk/finst1.mid@/disk/finst1.mid"   # the staff roll
 
+# Every archive, data file and song the sources can ask for has to be in
+# EMBED: the native tools read disk/ off the filesystem, the page only has
+# what --embed-file put in it, so a missing one is a bug that only shows in a
+# browser (disk/stage3.bin was missing once, and clearing the second stage
+# dropped the player back to the title).  finend2 is asked for and is not in
+# the installer at all - the original's own gap, so it is allowed here.
+missing=
+for n in $(grep -ho 'game_scene(g, "[a-z0-9._]*"' src/*.c | sed 's/.*"\(.*\)"/\1/' | sort -u) \
+          $(grep -ho 'plat_read("[a-z0-9._]*"' src/*.c | sed 's/.*"\(.*\)"/\1/' | sort -u) \
+          $(grep -ho 'plat_bgm([0-9], "[a-z0-9._]*"' src/*.c | sed 's/.*"\(.*\)"/\1/' | sed 's/$/.mid/' | sort -u)
+do
+    [ "$n" = ".mid" ] && continue              # plat_bgm(4, "") - the stop
+    [ "$n" = "finend2.mid" ] && continue       # not in the installer
+    case "$EMBED" in
+        *"disk/$n@"*) ;;
+        *) echo "not embedded: disk/$n"; missing=1 ;;
+    esac
+done
+if [ -n "$missing" ]; then
+    echo "add it to EMBED in tools/build_wasm.sh"
+    exit 1
+fi
+
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \
    src/main_wasm.c src/game.c src/play.c src/air.c src/space.c \
