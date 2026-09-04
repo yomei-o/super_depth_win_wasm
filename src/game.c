@@ -654,8 +654,8 @@ static void st_play_end(Game *g)
         g->entered = 0;
         g->sub = 0;
     }
-    /* FUN_004031d0 writes DEMO1.DAT back out; the port has nowhere to put it. */
-    g->demo = 0;
+    plat_write("demo1.dat", g->rec, g->reclen);  /* FUN_004031d0 */
+    g->demo = 0;                        /* FUN_00403350 */
     game_set_state(g, ST_LOGO);
 }
 
@@ -780,6 +780,12 @@ int game_debug(Game *g, int cmd)
     int stage = 0, hook = 0, i;
 
     switch (cmd) {
+    case DBG_BOX_ON:                    /* 0x4262ca */
+        g->boxes = 1;
+        return 1;
+    case DBG_BOX_OFF:                   /* 0x4262d6 */
+        g->boxes = 0;
+        return 1;
     case DBG_LOGO:                      /* 0x42658d */
         game_set_state(g, ST_LOGO0);
         return 1;

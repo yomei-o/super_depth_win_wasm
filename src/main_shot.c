@@ -55,6 +55,14 @@ int plat_read(const char *name, unsigned char *buf, int max)
     return n;
 }
 
+void plat_write(const char *name, const unsigned char *buf, int n)
+{
+    /* The tools do not write a recording out either. */
+    (void)name;
+    (void)buf;
+    (void)n;
+}
+
 static int save(const char *path, const Gfx *g, int w, int h)
 {
     static unsigned char buf[GFX_H][GFX_W];

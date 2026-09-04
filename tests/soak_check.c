@@ -44,6 +44,18 @@ int plat_read(const char *name, unsigned char *buf, int max)
     return n;
 }
 
+/* The checks never put a recording on the disk - disk/demo1.dat is the
+ * original's own - so this only remembers that it was asked. */
+int demo_written = -1;
+
+void plat_write(const char *name, const unsigned char *buf, int n)
+{
+    (void)name;
+    (void)buf;
+    demo_written = n;
+}
+
+
 static void bad(const char *what, int frame, int v)
 {
     if (fails < 20) printf("FAIL %s at frame %d (%d)\n", what, frame, v);

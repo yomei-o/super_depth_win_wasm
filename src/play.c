@@ -66,15 +66,19 @@ static const int STAGE_KIND[16][16] = {
 };
 
 /* 0x43fe70, 0x1e ints a row, indexed by the four-stage cycle and the kind. */
-static const int SCORE[5][12] = {
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 },   /* row 0 is never read */
-    { 1, 5, 30, 20, 50, 30, 0, 0, 0, 10, 0, 0 },
-    { 2, 10, 20, 30, 50, 10, 0, 0, 0, 10, 0, 0 },
-    { 3, 10, 20, 30, 200, 10, 11, 12, 13, 10, 20, 0 },
-    /* the fourth cycle is the boss stage: 1000 for finishing it and 10 a
-     * hit (the boss stage reads [1] and [2] of its own row) */
-    { 4, 1000, 10, 20, 500, 20, 0, 0, 0, 0, 0, 0 }
+/* 0x43fe70: five rows of THIRTY ints, read as `SCORE[cycle][kind]`.  The
+ * width matters - the space stage has kinds up to 12, and in the original
+ * those land on this row's own zeroes rather than on the next row.  Row 0 is
+ * 0..29 and is never read: the cycle is 1..4. */
+static const int SCORE[5][30] = {
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+      20, 21, 22, 23, 24, 25, 26, 27, 28, 29 },
+    { 1, 5, 30, 20, 50, 30, 0, 0, 0, 10 },
+    { 2, 10, 20, 30, 50, 10, 0, 0, 0, 10 },
+    { 3, 10, 20, 30, 200, 10, 11, 12, 13, 10, 20 },
+    { 4, 1000, 10, 20, 500, 20 }
 };
+
 
 /* One kind's slot in the stage table, the way FUN_0040aa20 reads it: 64
  * dwords from the stage's own row, so it runs on into the rows below. */
@@ -160,6 +164,21 @@ void play_item_name(Game *g, int x, int y, int kind)
         if (cap < at) at = cap;
     }
     vid_text8(g->v, at, y + 0x20, name);
+}
+
+/* FUN_00403520: the outline of a collision box in colour 0, which the
+ * debug menu's 0x84c turns on.  The y arrives in game coordinates and the
+ * fill takes surface ones, so the boxes sit 0x20 above the sprites - that is
+ * how the original draws them. */
+void play_box(Game *g, int x, int y, int w, int h)
+{
+    Video *v = g->v;
+
+    if (!g->boxes) return;
+    vid_fill(v, x, y, x + w, y + 1, 0);
+    vid_fill(v, x, y + h, x + w, y + h + 1, 0);
+    vid_fill(v, x, y, x + 1, y + h + 1, 0);
+    vid_fill(v, x + w, y, x + w + 1, y + h, 0);
 }
 
 /* FUN_0040ae50: eight frames of explosion from 0xa35. */
@@ -273,25 +292,29 @@ static void popups_draw(Game *g)
 int play_score_of(const Play *p, int kind)
 {
     if (p->cycle < 0 || p->cycle > 4) return 0;
-    if (kind < 0 || kind > 11) return 0;
+    if (kind < 0 || kind > 29) return 0;
     return SCORE[p->cycle][kind];
 }
 
-/* FUN_0040acf0: an enemy has been hit.  Its own speed is halved (the wreck
- * drifts), the death animation starts, the score goes up by the kind's worth
- * times the chain, and a popup says so.  The popup itself is not ported yet;
- * the score is. */
+/* FUN_0040acf0: an enemy has been hit.  Its own speed is halved so the
+ * wreck drifts - except in the space stage, where the wreck is thrown
+ * sideways twice as fast instead - the death animation starts, the score
+ * goes up by the kind's worth times the chain, and a popup says so. */
 void play_enemy_hit(Game *g, int i, int chain)
 {
     Play *p = &g->p;
     Enemy *e = &p->e[i];
     int worth;
 
-    e->vx /= 2;
-    e->vy /= 2;
+    if (g->hook == HOOK_SPACE) {
+        e->vx <<= 1;
+    } else {
+        e->vx /= 2;
+        e->vy /= 2;
+    }
     e->state = 9;
     e->chain = chain;
-    worth = SCORE[p->cycle][e->kind];
+    worth = play_score_of(p, e->kind);
     p->score += worth * chain;
     se_at("burn", e->x + 0x18);
     if (worth * chain > 0)
@@ -328,7 +351,10 @@ void play_field_build(Game *g)
         e->vx = 0;
         e->vy = 0;
         e->x = 0x3c0;                   /* off to the right, out of the way */
-        e->y = 0;
+        /* y = 0 is the sea stage's free slot; every other stage wants one
+         * above the top of the screen, and FUN_0040aa20 reads the hook to
+         * tell which it is building. */
+        e->y = g->hook == HOOK_PLAY ? 0 : -0x20;
         e->w = 0;                       /* [6] is not touched here */
         e->state = 10;                  /* [11] */
         e->aim = 0;                     /* [12] */
@@ -1194,6 +1220,11 @@ void play_frame(Game *g)
             }
             vid_pat(v, e->x, e->y, n);
         }
+        /* and the box over it, whichever of the two branches drew */
+        switch (e->kind) {
+        case 1: case 2: case 4: play_box(g, e->x, e->y, 0x40, 0x20); break;
+        case 3: case 9: play_box(g, e->x, e->y, 0x20, 0x20); break;
+        }
     }
     for (i = 0; i < ESHOTS; i++)
         if (p->s[i].y > -0x10) {
@@ -1211,10 +1242,13 @@ void play_frame(Game *g)
             if (g->frame % 2 != 0) p->sp[i].frame++;
         }
     for (i = 0; i < p->charges; i++)    /* FUN_00405af0 */
-        if (p->c[i].y != 0x134)
+        if (p->c[i].y != 0x134) {
             vid_pat(v, p->c[i].x, p->c[i].y, p->cframe + 0x981);
+            play_box(g, p->c[i].x, p->c[i].y, 0x10, 0x10);
+        }
     if (p->life < 10) play_boom(v, p->px, p->py - 0x10, 9 - p->life);
     else vid_pat(v, p->px, p->swell + p->py, 0xa05);
+    play_box(g, p->px, p->swell + p->py, 0x40, 0x20);
     for (i = 0, n = 0x28; i < p->charges - p->inflight; i++, n += 2)
         vid_pat(v, (n - p->charges) * 8, 4, p->cframe + 0x981);
 

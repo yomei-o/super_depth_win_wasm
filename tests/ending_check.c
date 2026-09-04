@@ -56,6 +56,17 @@ int plat_read(const char *name, unsigned char *buf, int max)
     return n;
 }
 
+/* The checks never put a recording on the disk - disk/demo1.dat is the
+ * original's own - so this only remembers that it was asked. */
+int demo_written = -1;
+
+void plat_write(const char *name, const unsigned char *buf, int n)
+{
+    (void)name;
+    (void)buf;
+    demo_written = n;
+}
+
 static void ok(int cond, const char *what)
 {
     if (!cond) { printf("FAIL %s\n", what); fails++; }
@@ -196,6 +207,50 @@ int main(void)
     p->powerB = 0;
     game_debug(&game, DBG_FULLPOWER);
     ok(p->speed > 0 && p->charges > 0, "full power fills the ship up");
+
+    /* ---- the collision boxes (0x84c / 0x84d) ------------------------ */
+    to_title();
+    game_set_pad(&game, PAD_BTN1);      /* Game Start */
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    for (t = 0; t < 200; t++) game_tick(&game);
+    ok(game.state == ST_PLAY && game.hook == HOOK_PLAY, "in the sea stage");
+    /* The ship's own box is drawn in colour 0 at (px, swell + py) - in
+     * surface coordinates, so 0x20 above the ship itself.  Park it in the
+     * middle of the water, where the background is not black. */
+    p->px = 0x100;
+    p->py = 0x80;
+    game_tick(&game);
+    ok(vid.px[p->swell + p->py][p->px] != 0, "the sea is drawn there");
+    ok(game_debug(&game, DBG_BOX_ON) == 1 && game.boxes == 1,
+       "the boxes can be turned on");
+    game_tick(&game);
+    ok(vid.px[p->swell + p->py][p->px] == 0,
+       "and the ship's top left corner goes black");
+    shot("tmp/end_boxes.png");
+    game_debug(&game, DBG_BOX_OFF);
+    game_tick(&game);
+    ok(game.boxes == 0 && vid.px[p->swell + p->py][p->px] != 0,
+       "and off again");
+
+    /* ---- デモ録画開始: record, then Esc writes it out --------------- */
+    to_title();
+    game_debug(&game, DBG_DEMO_REC);
+    game_tick(&game);
+    ok(game.state == ST_RECORD, "the recording state is 0x34");
+    for (t = 0; t < 40; t++) {
+        game_set_pad(&game, t % 8 < 4 ? PAD_LEFT : PAD_RIGHT);
+        game_tick(&game);
+    }
+    game_set_pad(&game, 0);
+    ok(demo_written == -1, "nothing is written while it records");
+    game_set_pad(&game, PAD_ESC);
+    game_tick(&game);
+    game_set_pad(&game, 0);
+    game_tick(&game);
+    /* 40 frames of pad, the Esc frame, and the one that acts on it */
+    ok(demo_written == 42, "and Esc writes the frames out (FUN_004031d0)");
+    ok(game.state == ST_LOGO, "then back to the logo");
 
     /* The staff roll on its own, which is the other mode-select entry. */
     to_title();

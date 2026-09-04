@@ -89,6 +89,24 @@ const ctx2d = cv.getContext('2d', { alpha: false });
 const statusEl = document.getElementById('status');
 const diagEl = document.getElementById('diag');
 let ready = false, bgmOn = true, song = 1, view = 0;
+let demoStamp = 0;
+
+// FUN_004031d0 wrote DEMO1.DAT; a browser has no disk to put it on, so the
+// bytes come out as a download under the same name.  Drop it into disk/ and
+// the attract mode plays it back.
+function demoSave() {
+  const n = Module._sd_demo_len();
+  if (!n) return;
+  const p = Module._sd_demo_ptr();
+  const blob = new Blob([Module.HEAPU8.slice(p, p + n)],
+                        { type: 'application/octet-stream' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'demo1.dat';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  statusEl.textContent = 'demo1.dat を書き出しました（' + n + ' フレーム）';
+}
 
 // --- input ----------------------------------------------------------------
 // The pad bits FUN_00430f50 packs out of its key table at DAT_00444c20, with
@@ -247,6 +265,10 @@ var Module = {
         rankStamp = Module._sd_rank_stamp();
         rankSave();
       }
+      if (Module._sd_demo_stamp() !== demoStamp) {
+        demoStamp = Module._sd_demo_stamp();
+        demoSave();
+      }
       const p = Module._sd_framebuffer();
       img.data.set(Module.HEAPU8.subarray(p, p + w * h * 4));
       ctx2d.putImageData(img, 0, 0);
@@ -311,6 +333,7 @@ const DBG = [
   ['STAGE 07', 0x872], ['STAGE 08', 0x873], ['STAGE 09', 0x874],
   ['STAGE 10', 0x875], ['STAGE 11', 0x876], ['STAGE 12', 0x877], ['gap', 0],
   ['フルパワー', 0x85f], ['デモ再生', 0x87b], ['デモ録画開始', 0x878],
+  ['gap', 0], ['当たり判定を出す', 0x84c], ['当たり判定を消す', 0x84d],
 ];
 {
   const box = document.getElementById('dbg');

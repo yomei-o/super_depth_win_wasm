@@ -107,6 +107,7 @@ typedef struct {
     int fullscreen;                     /* DAT_004bf8b8, the registry setting */
     int demo;                           /* DAT_00464ed8, 0 = a person plays */
     int hook, hook_arg;                 /* DAT_004492c8 / DAT_004492ac */
+    int boxes;                          /* DAT_00462168, the debug outlines */
 
     int logo_row[LOGO_ROWS];            /* DAT_0044653c: 1 = that row is hidden */
     int logo_left;                      /* DAT_004492b8, rows still hidden */
@@ -156,6 +157,10 @@ void plat_bgm(int mode, const char *name);      /* FUN_00420980(mode, name) */
 void plat_se(const char *name, int pan);
 /* Read a data file whole; returns how many bytes came back, or -1. */
 int  plat_read(const char *name, unsigned char *buf, int max);
+/* FUN_004031d0 writing DEMO1.DAT back out at the end of a recording.  The
+ * native checks do not put it on the disk (`disk/demo1.dat` is the
+ * original's own recording); the page hands it to the browser to save. */
+void plat_write(const char *name, const unsigned char *buf, int n);
 
 void game_init(Game *g, Video *v);
 void game_set_pad(Game *g, unsigned pad);
@@ -202,6 +207,7 @@ void play_item_name(Game *g, int x, int y, int kind);   /* FUN_0040b1c0 */
 void play_boom(Video *v, int x, int y, int frame);      /* FUN_0040ae50 */
 void play_status_bar(Game *g);          /* FUN_004093d0 */
 void play_clear_banners(Game *g);       /* FUN_0040a9f0 */
+void play_box(Game *g, int x, int y, int w, int h);     /* FUN_00403520 */
 int  play_score_of(const Play *p, int kind);            /* 0x43fe70's table */
 
 /* src/air.c */
@@ -222,7 +228,8 @@ void staff_frame(Game *g);              /* FUN_00414210 */
 /* The debug menu's commands (the MENU resource the release build drops),
  * by the resource's own ids.  Answers non-zero when the command was one of
  * them.  See the head of src/ending.c. */
-enum { DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
+enum { DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,
+       DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
        DBG_STAGE04 = 0x851, DBG_STAGE05 = 0x852, DBG_STAGE06 = 0x853,
        DBG_FULLPOWER = 0x85f,
        DBG_LOGO = 0x86d, DBG_TITLE = 0x86e,

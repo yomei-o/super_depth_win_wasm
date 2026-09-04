@@ -194,6 +194,26 @@ EMSCRIPTEN_KEEPALIVE int sd_state(void) { return g_game.state; }
 EMSCRIPTEN_KEEPALIVE int sd_fps(void) { return g_game.fps; }
 EMSCRIPTEN_KEEPALIVE void sd_set_pad(int pad) { game_set_pad(&g_game, (unsigned)pad); }
 
+/* FUN_004031d0: the recording, kept here for the page to save.  There is
+ * no writable disk\demo1.dat in a browser, so the page offers it as a
+ * download under the same name. */
+static unsigned char g_demo[10000];
+static int g_demo_len, g_demo_stamp;
+
+void plat_write(const char *name, const unsigned char *buf, int n)
+{
+    (void)name;
+    if (n < 0) n = 0;
+    if (n > (int)sizeof g_demo) n = (int)sizeof g_demo;
+    memcpy(g_demo, buf, (size_t)n);
+    g_demo_len = n;
+    g_demo_stamp++;
+}
+
+EMSCRIPTEN_KEEPALIVE unsigned char *sd_demo_ptr(void) { return g_demo; }
+EMSCRIPTEN_KEEPALIVE int sd_demo_len(void) { return g_demo_len; }
+EMSCRIPTEN_KEEPALIVE int sd_demo_stamp(void) { return g_demo_stamp; }
+
 /* One of the debug menu's commands - the menu the release build leaves off
  * the window.  See the head of src/ending.c for the ids. */
 EMSCRIPTEN_KEEPALIVE int sd_debug(int cmd) { return game_debug(&g_game, cmd); }
