@@ -14,6 +14,13 @@ user の依頼: 「super depth の windows 版を ghidra で解析して wasm �
 * `out/superdepth.c` 587 関数（**落ちた関数は 0**）、
   `out/superdepth.asm` 47311 命令。32bit の MSVC なので**逆コンパイルの
   質がとても良い** —— PC-98 の 16bit とは別世界で、ほぼそのまま読める
+* **`.dar` は読める**（`src/dar.c`、検査つき）。**描画層もある**
+  （`src/video.c`：640x480 の 8bpp、パターン、原作のフォント）
+* **BGM は鳴る**（`src/smf.c` / `src/synth.c`。user 自身の
+  [windepth_wasm](https://github.com/yomei-o/windepth_wasm) から）
+* **WASM とページもある**（`index.html` / `superdepth.js`）。いまは
+  移植済みのところの展示: https://yomei-o.github.io/super_depth_win_wasm/
+* **ゲーム本体は未着手。** 状態機械は下に書いた
 
 ## 本体の見取り（`disk/superdepth.exe`）
 
@@ -39,19 +46,89 @@ PE32 / MSVC 6.0 / image base 0x400000 / entry 0x426b04（RVA 0x26b04）。
 デバッグ表示の書式が残っている: `%2dF SE:%s BGM:%s`、
 `rankin = %d rcurX = %02d rcurY = %02d`、`Super Depth Top Score Ranking`。
 
+## 本体の作り（読めたところ）
+
+### 毎フレームの流れ — `FUN_004209a0`
+
+窓オブジェクトの毎フレーム処理。WinGL の側。
+
+```
+FUN_00430f50(pad, out)        キー表を舐めて pad のビットを作る（下記）
+  → DAT_004bf83c.. に 1 ビットずつばらす
+GetLocalTime / GetCursorPos   → これも global へ
+thunk_FUN_00401500(surface)   ★ゲームの 1 フレーム（下記）
+FUN_00422410 / FUN_00425f80
+画面の端 2 本を消す
+必要なら解像度を変える        DAT_004bf8bc: 0=640x480 1=320x240 2=1280x960
+FUN_00417e70(surface, hdc)    ★present（DC へ転送）
+DAT_004bf820 = (frame+1) & 0x800000ff   ★フレーム数
+DAT_004bf810[0xd7] を DAT_004bfc18 へ複写   ★前フレームの入力（エッジ検出用）
+```
+
+**タイマは 33ms**（`WinMain` の `FUN_00424870(this, 0x21, 200, 0)`。
+第 2 引数 200 は取りこぼしの追いつき上限。windepth は 50ms=20fps だった）。
+
+### pad のビットとキー — `DAT_00444c20` の表（実測）
+
+| ビット | 既定のキー |
+|---|---|
+| 0x01 UP | K / ↑ / テンキー8 |
+| 0x02 DOWN | J / ↓ / テンキー2 |
+| 0x04 LEFT | H / ← / テンキー4 |
+| 0x08 RIGHT | L / → / テンキー6 |
+| 0x10 BTN1 | Z / Space（2P はテンキー0） |
+| 0x20 BTN2 | X / Enter（2P はテンキー5） |
+| 0x40 BTN3 | Shift |
+| 0x80 BTN4 | Q |
+| 0x1000 START | F2 |
+| 0x8000 | Esc（表の外、直接 GetAsyncKeyState） |
+
+**windepth_wasm と同じ並び**（同じ WinGL なので当然）。あちらの
+`index.html` の KEYMAP がそのまま使える。
+
+### ゲームの状態機械 — `FUN_00401500`
+
+`switch (DAT_004bf894)` ひとつ。`FUN_00421da0(n)` が次の状態を入れ、
+`DAT_004bf89c` が「入ったばかり」の旗。
+
+| 状態 | 中身 |
+|---|---|
+| 0x0a | 初期化して 0x10 へ |
+| 0x0f / 0x10 | **Bio_100% のロゴ**。`staff.dar` を 291 枚読み、`bgm01`、184 行の配列 `DAT_0044653c` を乱数で 0/1 にしてロゴを行ごとに出し入れする（`DAT_004492c0` が 0=出す 2=消す）。消し終わりで 0x1e へ |
+| 0x1e | **タイトル（海）**。`depth1.dar` を 9 枚読み（**同じスロット 0xb47 に上書き**）、`bgm02`、空・海面・海中のタイルを敷き、16x16 のスプライトを並べ、乱数で 7 レーンに何かを流す。`DAT_00449284 = 0x708` のカウントダウンが切れると 0x33 へ |
+| 0x32 / 0x33 / 0x34 / 0x35 | タイトルの続き。0x35 は 0x10 へ戻る（デモの輪） |
+| 0x46 | **SOUND TEST**（"SOUND TEST" / "Bio_100% LOGO" / "BGM %02d" / `bgm%02d`） |
+| 0x5a | 版とクレジット（"Super Depth ver1.00a Copyright(c)1991 Hideki Mori and Yasuo Futatsugi" / "alty & tacox / Bio_100%"） |
+
+`DAT_004492f0` の内側の switch と `"Game Design - alty & tacox"` から
+0x25 バイト刻みの表を引く所がスタッフロールの文字。
+
+### パターンのスロットは使い回す
+
+`FUN_00419700`（`PatEntryDAR`）の第 1 引数が**入れる先のスロット番号**で、
+ゲームは
+
+* `depth.dar` の 2887 枚を 0..2886 に
+* その上の **0xb47 = 2887 から**、場面ごとに `staff.dar`（291 枚）や
+  `depth1.dar`（9 枚）を**上書きして**使う
+
+だから状態 0x0f では 0xb47 が `biologo_staff`、状態 0x1e では 0xb47 が
+`sea01` になる。**同じ番号が場面によって別の絵**という前提で読むこと。
+
 ## 次にやること（順）
 
-1. **`.dar` の展開を確定させる。** docs/format.md の推測を
-   `FUN_0041a3e0`（`PatBuildDAR`）と `FUN_004199c0`（ヘッダを見る所）、
-   `FUN_00419700`（`PatEntryDAR`）で裏を取る。出せたら PNG に描いて確認
-   （`tools/` に `dar.py` を作る）
-2. **`stage3.bin`（"SDEPTH"）** の面データ
-3. **WinGL** の移植 —— 画面の大きさ（readme は 640x480 以上、
-   ウインドウモード推奨）と、DIB のパレットの扱いから
-4. **ゲーム本体**。`WinMain` から追う
-5. **音**。WAV は素の RIFF なのでそのまま鳴らせる。BGM は SMF なので
-   ブラウザで鳴らすには合成器が要る（`soko_ban_wasm` の MMD2 は自前で
-   書いた。ここは GM の SMF なので別問題。後回し）
+1. ~~`.dar` の展開~~ 済み（`src/dar.c`、docs/format.md）
+2. ~~描画層~~ 済み（`src/video.c`）
+3. ~~BGM~~ 済み（`src/smf.c` / `src/synth.c` を windepth_wasm から）
+4. ~~WASM とページ~~ 済み（いまは絵と音の展示）
+5. **状態 0x0f/0x10（Bio ロゴ）を移植する。** 一番小さくて完結している。
+   184 行の出し入れ、`DAT_004492c0` の 0/2、消え終わりで 0x1e
+6. **状態 0x1e（海のタイトル）**。空・海面・海中のタイルの敷き方と、
+   7 レーンの乱数スポーン
+7. **`stage3.bin`** の 24 バイトレコードの意味（`FUN_00413df0` の
+   switch が kind 0..3 を runtime の型 0/1/2/3/0x32 に写す所から）
+8. **ゲーム本体**。状態 0x32..0x35 の先と、`stage3.bin` を使う所
+9. **効果音**。WAV は素の RIFF なので、ページで鳴らすだけ
 
 ## Ghidra（この機械に入っている）
 

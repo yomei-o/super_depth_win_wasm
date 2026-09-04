@@ -13,6 +13,9 @@ Copyright(C)1998-1999 Bio_100% Inc.
 関数なのかを確かめてから、同じ振る舞いをする C を手で書く。描画はソフト
 ウェアラスタライズのみ（**WebGL は使わない**）。
 
+**いまのところの展示: https://yomei-o.github.io/super_depth_win_wasm/**
+（原作から取り出した絵と音。ゲーム本体はまだ移植中）
+
 同じやり方の前作: [soko_ban_wasm](https://github.com/yomei-o/soko_ban_wasm)、
 [lord_monarch_wasm](https://github.com/yomei-o/lord_monarch_wasm)、
 PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
