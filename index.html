@@ -45,7 +45,7 @@
 <div class="keys">
   <kbd>Z</kbd> ボタン1 &nbsp; <kbd>X</kbd> ボタン2 &nbsp;
   <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> 十字 &nbsp;
-  <kbd>F2</kbd> スタート &nbsp;&nbsp;
+  <kbd>F2</kbd> スタート &nbsp; <kbd>Esc</kbd> ポーズ／デモを抜ける &nbsp;&nbsp;
   <kbd>0</kbd> ゲーム &nbsp; <kbd>1</kbd> 文字とスプライト &nbsp;
   <kbd>2</kbd> パターン一覧 &nbsp; <kbd>F4</kbd> BGM
 </div>
@@ -275,6 +275,20 @@ var Module = {
       ctx2d.putImageData(img, 0, 0);
     }, 33);
 
+    // The attract demo is the original's own recording, 8235 frames of it
+    // (four and a half minutes), and the only key it listens to is the one
+    // the original listens to: Esc.  Say so while it plays.
+    let wasDemo = false;
+    setInterval(() => {
+      const demo = Module._sd_state() === 0x33;
+      if (demo !== wasDemo) {
+        wasDemo = demo;
+        statusEl.textContent = demo
+          ? 'デモ再生中（原作の録画 demo1.dat・8235 フレーム）— Esc で戻ります'
+          : 'パターン ' + Module._sd_patterns() + ' 枚 / Z X ←→ で遊べます';
+      }
+    }, 200);
+
     setInterval(() => {
       const st = Module._sd_state().toString(16).padStart(2, '0');
       diagEl.textContent =
@@ -359,6 +373,11 @@ const DBG = [
     box.appendChild(b);
   }
 }
+
+// A key held while the window loses focus never gets its keyup, and the
+// bit would stay set for ever.  Let go of everything instead.
+addEventListener('blur', () => { pad = 0; });
+addEventListener('visibilitychange', () => { if (document.hidden) pad = 0; });
 
 cv.addEventListener('mousedown', ensureContext);
 addEventListener('pointerdown', ensureContext);

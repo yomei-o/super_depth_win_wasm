@@ -152,8 +152,21 @@ int main(int argc, char **argv)
             bad("shells in flight", (int)t, p->neshot);
         if (p->nbomb < 0 || p->nbomb > BOMBS)
             bad("bombs in flight", (int)t, p->nbomb);
-        if (p->nab < 0 || p->nab > ABOMBS + 5)
+        /* The air stage's own counter leaks downward and the port keeps
+         * the leak: FUN_0040c9e0 counts a bomb down when its y leaves
+         * 0..0x15f, and a plane still above the screen can drop one at a
+         * negative y - which is counted down on its first frame and then
+         * goes on flying.  So this only watches for a wild value; the
+         * counter is a rate limiter (`nab < 0x10`), nothing indexes with it.
+         * How many bombs are really in the air is what has to hold. */
+        if (p->nab < -ABOMBS * 4 || p->nab > ABOMBS + 5)
             bad("aimed bombs in flight", (int)t, p->nab);
+        {
+            int live = 0, j;
+
+            for (j = 0; j < ABOMBS; j++) if (p->ab[j].y < 0x160) live++;
+            if (live > ABOMBS) bad("aimed bombs on the field", (int)t, live);
+        }
         if (p->charges < 0 || p->charges > 0x10)
             bad("charges carried", (int)t, p->charges);
         if (p->lives < -1 || p->lives > 99)
