@@ -785,6 +785,9 @@ int game_debug(Game *g, int cmd)
         plat_bgm(4, "");                /* the name is only read to play */
         game_set_state(g, ST_BOOT);
         return 1;
+    case DBG_NODIE:                     /* 0x4261f3 */
+        g->nodie = !g->nodie;
+        return 1;
     case DBG_CHAIN:                     /* 0x426240 */
         g->echain = !g->echain;
         return 1;

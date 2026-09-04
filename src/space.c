@@ -960,7 +960,7 @@ void space_frame(Game *g)
 
         if (p->life < 10 || e->y < -0x1f || e->y > 0x15f || e->state < 10)
             continue;
-        if (p->hit == 1 || p->big_timer > 0) break;
+        if (g->nodie == 1 || p->big_timer > 0) break;
         switch (e->kind) {
         case 1: case 9: case 10: case 0xc: w = 0x20; h = 0x20; break;
         case 2: case 3: w = 0x40; h = 0x20; break;

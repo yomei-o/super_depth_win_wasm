@@ -92,20 +92,20 @@ static void reach_boss(void)
     game_tick(&game);
     game_set_pad(&game, 0);
     game_tick(&game);
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = 0; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
     for (i = 0; i < 300 && game.hook != HOOK_AIR; i++) game_tick(&game);
     game_tick(&game);
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = -0x20; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
     p->item = 0;
     for (i = 0; i < 400 && game.hook != HOOK_SPACE; i++) game_tick(&game);
     game_tick(&game);
-    p->hit = 1;
+    game.nodie = 1;
     p->sc_at = p->nscript;              /* wind the script to its end */
     p->sc_wait = 0;
     for (i = 0; i < p->nenemy; i++) p->e[i].kind = 0;
@@ -113,7 +113,7 @@ static void reach_boss(void)
     p->item = 0;
     for (i = 0; i < 300 && game.hook != HOOK_BOSS; i++) {
         game_tick(&game);
-        p->hit = 1;
+        game.nodie = 1;
     }
 }
 
@@ -141,7 +141,7 @@ int main(void)
     shot("tmp/boss_first.png");
 
     /* It comes in from the right. */
-    p->hit = 1;
+    game.nodie = 1;
     x0 = b->x;
     for (t = 0; t < 60; t++) game_tick(&game);
     ok(b->x < x0, "the boss works its way in");

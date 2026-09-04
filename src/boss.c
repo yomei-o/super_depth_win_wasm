@@ -543,7 +543,7 @@ void boss_frame(Game *g)
                 continue;
             }
             if (p->life == 10 && a->x >= p->px && a->x <= p->px + 0x3a &&
-                a->y >= p->py + 6 && a->y <= p->py + 0x1a && p->hit == 0) {
+                a->y >= p->py + 6 && a->y <= p->py + 0x1a && g->nodie == 0) {
                 p->life = 9;
                 a->y = 0x160;
                 plat_se("burn", (p->px + 0x20 - 0x140) * 0x1f);
@@ -559,7 +559,7 @@ void boss_frame(Game *g)
             if (p->gun_x[i] < -0x20 || p->gun_x[i] > 0x25f) {
                 p->gun_y[i] = 0x160;
                 p->gunfire--;
-            } else if (p->life == 10 && p->hit == 0 &&
+            } else if (p->life == 10 && g->nodie == 0 &&
                        p->gun_x[i] >= p->px - 0x34 &&
                        p->gun_x[i] <= p->px + 0x34 &&
                        p->gun_y[i] >= p->py + 6 &&
@@ -570,7 +570,7 @@ void boss_frame(Game *g)
         }
 
     /* --- running into it ------------------------------------------------ */
-    if (p->hit == 0 && cycle4 == 1 &&
+    if (g->nodie == 0 && cycle4 == 1 &&
         p->px > b->x - 0x30 && p->px < b->x + 0x70 &&
         p->py > b->y - 0x14 && p->py < b->y + 0x54) {
         if (p->boss_phase < 0x78) {

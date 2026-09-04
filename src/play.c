@@ -1059,7 +1059,7 @@ void play_frame(Game *g)
         }
         if (stall) t->y++;
         t->x += p->flip * -2 + 1;
-        if (p->life == 10 && p->hit == 0 &&
+        if (p->life == 10 && g->nodie == 0 &&
             t->x >= p->px - 6 && t->x <= p->px + 0x36 &&
             t->y >= p->py - 0xc && t->y <= p->py + 0x18) {
             splash(p, t->x, t->y);
@@ -1086,7 +1086,7 @@ void play_frame(Game *g)
         }
         if (s->vx > 8 || s->vx < -8) s->vx = sgn(s->vx) * 8;
         s->x += s->vx;
-        if (p->life == 10 && p->hit == 0 &&
+        if (p->life == 10 && g->nodie == 0 &&
             s->x >= p->px - 4 && s->x <= p->px + 0x34 &&
             s->y >= p->py - 0xc && s->y <= p->py + 0x18) {
             p->life = 9;

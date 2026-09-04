@@ -476,7 +476,7 @@ void air_frame(Game *g)
         if (b->y >= 0x160) continue;
         if (b->vy < 8 && p->flip != 0) b->vy++;
         b->y += b->vy;
-        if (p->life == 10 && p->hit == 0 &&
+        if (p->life == 10 && g->nodie == 0 &&
             b->x >= p->px - 4 && b->x <= p->px + 0x34 &&
             b->y >= p->py && b->y <= p->py + 0x18) {
             p->life = 9;
@@ -496,7 +496,7 @@ void air_frame(Game *g)
             p->nab--;
             continue;
         }
-        if (p->life == 10 && p->hit == 0 &&
+        if (p->life == 10 && g->nodie == 0 &&
             b->x >= p->px - 2 && b->x <= p->px + 0x3a &&
             b->y >= p->py + 6 && b->y <= p->py + 0x1a) {
             p->life = 9;

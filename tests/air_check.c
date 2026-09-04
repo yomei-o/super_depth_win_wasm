@@ -94,7 +94,7 @@ static void reach_air(void)
     game_tick(&game);
     game_set_pad(&game, 0);
     game_tick(&game);                                   /* state 0x32 */
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = 0; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
@@ -128,7 +128,7 @@ int main(void)
     shot("tmp/air_first.png");
 
     /* The ship moves further than at sea: 0x20 to 0x220. */
-    p->hit = 1;
+    game.nodie = 1;
     x0 = p->px;
     game_set_pad(&game, PAD_LEFT);
     for (t = 0; t < 300; t++) game_tick(&game);

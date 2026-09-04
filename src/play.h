@@ -140,7 +140,6 @@ typedef struct {
     int speed;              /* DAT_00463db0, 2 and up to 8 with the item */
     int life;               /* DAT_00461a64, 10 = alive, then it counts down */
     int lives;              /* DAT_00462194, 2 at the start */
-    int hit;                /* DAT_00463dc4, no collisions while it is set */
 
     int score;              /* DAT_00463dcc, shown times ten */
     int stage;              /* DAT_00463da4 */

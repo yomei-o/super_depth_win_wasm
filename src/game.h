@@ -114,6 +114,10 @@ typedef struct {
      * unless the debug menu's 0x86a turns them off.  It was a Play field
      * here, which meant play_clear zeroed it and no chain ever happened. */
     int echain;
+    /* DAT_00463dc4: 死なない, the other one FUN_00402480 sets once (to 0)
+     * and only the menu's 0x867 changes.  Nothing can hit the ship while it
+     * is on - which is what the checks here use it for. */
+    int nodie;
 
     int logo_row[LOGO_ROWS];            /* DAT_0044653c: 1 = that row is hidden */
     int logo_left;                      /* DAT_004492b8, rows still hidden */
@@ -235,7 +239,8 @@ void staff_frame(Game *g);              /* FUN_00414210 */
  * by the resource's own ids.  Answers non-zero when the command was one of
  * them.  See the head of src/ending.c. */
 enum { MENU_RESET = 0x860,              /* this one is in both menus */
-       DBG_CHAIN = 0x86a,               /* the chains, on at startup */
+       DBG_NODIE = 0x867,               /* 死なない, off at startup */
+       DBG_CHAIN = 0x86a,               /* 誘爆, on at startup */
        DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,
        DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
        DBG_STAGE04 = 0x851, DBG_STAGE05 = 0x852, DBG_STAGE06 = 0x853,

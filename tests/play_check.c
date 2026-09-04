@@ -148,7 +148,7 @@ int main(void)
     ok(p->banner > 0, "and Ready is on the screen");
 
     /* The ship moves at its speed and stops at the edges. */
-    p->hit = 1;                         /* DAT_00463dc4: no collisions */
+    game.nodie = 1;                     /* DAT_00463dc4: 死なない */
     x0 = p->px;
     game_set_pad(&game, PAD_RIGHT);
     game_tick(&game);
@@ -191,7 +191,7 @@ int main(void)
     /* A charge onto a submarine: the kind's score times the chain, and the
      * enemy starts blowing up. */
     start_game();
-    p->hit = 1;
+    game.nodie = 1;
     p->nenemy = 1;                      /* only slot 0 runs */
     p->px = 0x100;
     p->e[0].kind = 1;
@@ -233,7 +233,7 @@ int main(void)
     /* Meeting the quota with the screen clear ends the stage: the camera
      * follows the ship up to the surface and the stage number goes up. */
     start_game();
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = 0; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
@@ -264,7 +264,7 @@ int main(void)
 
     /* ESC pauses, and CONTINUE goes back in without re-arming the field. */
     start_game();
-    p->hit = 1;
+    game.nodie = 1;
     game_set_pad(&game, PAD_RIGHT);
     for (t = 0; t < 10; t++) game_tick(&game);
     game_set_pad(&game, 0);
@@ -300,7 +300,7 @@ int main(void)
      * The default table tops out at a thousand points, so five thousand
      * takes first place. */
     start_game();
-    p->hit = 1;
+    game.nodie = 1;
     p->lives = 0;
     p->score = 5000;
     p->life = 1;
@@ -347,7 +347,7 @@ int main(void)
 
     /* A score that is not good enough goes straight back to the logo. */
     start_game();
-    p->hit = 1;
+    game.nodie = 1;
     p->lives = 0;
     p->score = 1;
     p->life = 1;

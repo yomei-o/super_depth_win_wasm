@@ -92,13 +92,13 @@ static void reach_space(void)
     game_tick(&game);
     game_set_pad(&game, 0);
     game_tick(&game);
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = 0; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
     for (i = 0; i < 300 && game.hook != HOOK_AIR; i++) game_tick(&game);
     game_tick(&game);
-    p->hit = 1;
+    game.nodie = 1;
     for (i = 0; i < p->nenemy; i++) { p->e[i].y = -0x20; p->e[i].state = 10; }
     p->kills = p->quota;
     p->onscreen = 0;
@@ -132,7 +132,7 @@ int main(void)
 
     /* The script has to be doing something: entries get used up and things
      * turn up on the screen. */
-    p->hit = 1;
+    game.nodie = 1;
     for (t = 0; t < 600; t++) game_tick(&game);
     ok(p->sc_at > 0, "the script is being walked");
     for (i = 0, alive = 0; i < p->nenemy; i++)
@@ -146,7 +146,7 @@ int main(void)
         game_set_pad(&game, (t & 31) < 8 ? PAD_BTN1 :
                             ((t & 31) < 16 ? PAD_BTN2 : 0));
         game_tick(&game);
-        p->hit = 1;                     /* the checks are about the stage */
+        game.nodie = 1;                     /* the checks are about the stage */
         for (i = 0; i < p->nenemy; i++) {
             int k = p->e[i].kind;
             if (k < 0 || k >= 0x20) { ok(0, "an enemy kind out of range"); break; }
