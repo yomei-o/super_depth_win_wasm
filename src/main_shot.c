@@ -4,6 +4,7 @@
  *     tmp/sd_shot.exe pat   disk/staff.dar out.png 0     one pattern
  *     tmp/sd_shot.exe sheet disk/depth1.dar out.png      all of them
  *     tmp/sd_shot.exe list  disk/depth.dar               names and sizes
+ *     tmp/sd_shot.exe game  disk/depth.dar out.png 30    the game, 30 frames
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +13,26 @@
 #include "dar.h"
 #include "gfx.h"
 #include "video.h"
+#include "game.h"
 #include "png.h"
 
 static Dar dar;
 static Gfx gfx;
+
+/* What game.c wants from whoever is driving it.  The native tools read the
+ * archives straight out of disk/ and have nowhere to put music. */
+int plat_dar(Dar *d, const char *name)
+{
+    char path[96];
+
+    sprintf(path, "disk/%s", name);
+    return dar_load(d, path);
+}
+
+void plat_bgm(int mode, const char *name)
+{
+    printf("bgm: mode %d %s\n", mode, name);
+}
 
 static int save(const char *path, const Gfx *g, int w, int h)
 {
@@ -112,6 +129,26 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("%s -> %s (%d of %d patterns fitted)\n", argv[2], argv[3], i, dar.count);
+        return 0;
+    }
+    if (!strcmp(argv[1], "game")) {
+        /* Run the state machine and shoot the frame it lands on, so a screen
+         * can be looked at without a browser. */
+        static Video vid;
+        static Game game;
+        int frames = argc > 4 ? atoi(argv[4]) : 1, i;
+
+        vid_init(&vid, &dar);
+        game_init(&game, &vid);
+        for (i = 0; i < frames; i++) game_tick(&game);
+        memcpy(gfx.px, vid.px, sizeof gfx.px);
+        memcpy(gfx.pal, vid_palette(&vid), sizeof gfx.pal);
+        if (save(argv[3], &gfx, GFX_W, GFX_H)) {
+            fprintf(stderr, "cannot write %s\n", argv[3]);
+            return 1;
+        }
+        printf("%d frames -> %s (state %02x, %d frames in it)\n",
+               frames, argv[3], game.state, game.sub);
         return 0;
     }
     fprintf(stderr, "unknown mode %s\n", argv[1]);

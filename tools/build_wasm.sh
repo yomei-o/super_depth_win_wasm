@@ -15,18 +15,21 @@ EMCC="$EMSDK/upstream/emscripten/emcc.exe"
 [ -f "$EMCC" ] || { echo "emcc not found at $EMCC" >&2; exit 1; }
 
 EXPORTS=_main,_sd_init,_sd_tick,_sd_width,_sd_height,_sd_framebuffer
-EXPORTS=$EXPORTS,_sd_patterns,_sd_scene,_sd_set_scene,_sd_song,_sd_set_song
+EXPORTS=$EXPORTS,_sd_patterns,_sd_view,_sd_set_view,_sd_song,_sd_set_song
 EXPORTS=$EXPORTS,_sd_set_bgm,_sd_audio_init,_sd_audio,_sd_audio_left
-EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max
+EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_state,_sd_fps
 
 EMBED="--embed-file disk/depth.dar@/disk/depth.dar"
+for n in staff depth1 depth2 space ending; do
+    EMBED="$EMBED --embed-file disk/$n.dar@/disk/$n.dar"
+done
 for n in 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15; do
     EMBED="$EMBED --embed-file disk/bgm$n.mid@/disk/bgm$n.mid"
 done
 
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \
-   src/main_wasm.c src/video.c src/dar.c src/smf.c src/synth.c \
+   src/main_wasm.c src/game.c src/video.c src/dar.c src/smf.c src/synth.c \
    $EMBED \
    -s MODULARIZE=0 -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF32 \
    -s ALLOW_MEMORY_GROWTH=1 -s ENVIRONMENT=web,node \

@@ -34,16 +34,20 @@
 <body>
 <canvas id="screen" width="640" height="480"></canvas>
 <div class="keys">
-  <kbd>1</kbd> 文字とスプライト &nbsp; <kbd>2</kbd> パターン一覧 &nbsp;
-  <kbd>F4</kbd> BGM &nbsp; <kbd>&larr;</kbd> <kbd>&rarr;</kbd> 曲を選ぶ
+  <kbd>Z</kbd> ボタン1 &nbsp; <kbd>X</kbd> ボタン2 &nbsp;
+  <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> 十字 &nbsp;
+  <kbd>F2</kbd> スタート &nbsp;&nbsp;
+  <kbd>0</kbd> ゲーム &nbsp; <kbd>1</kbd> 文字とスプライト &nbsp;
+  <kbd>2</kbd> パターン一覧 &nbsp; <kbd>F4</kbd> BGM
 </div>
 <div id="status">読み込み中…</div>
 <div id="diag"></div>
 <div class="keys" style="max-width:60em">
-  <b>まだ移植中です。</b>ここに出ているのは原作から取り出した絵と音
-  —— <code>.dar</code> の書庫、256 色パレット、原作のフォント（8x8 と
-  16x16 の 8 色）、スプライト、そして原作の MIDI を自前で合成した BGM。
-  ゲーム本体はまだです。
+  <b>まだ移植中です。</b>いま動くのは Bio_100% のロゴ（状態 0x10）まで。
+  ロゴが消えると次の状態 0x1e —— 海のタイトル —— に入りますが、そこは
+  まだ移植していないので画面に「not ported yet」と出ます。
+  <kbd>1</kbd><kbd>2</kbd> は原作から取り出した絵の展示で、これは移植の
+  ついでに作ったものです。
   <a href="https://github.com/yomei-o/super_depth_win_wasm">ソースと解析メモ</a>
 </div>
 
@@ -52,7 +56,25 @@ const cv = document.getElementById('screen');
 const ctx2d = cv.getContext('2d', { alpha: false });
 const statusEl = document.getElementById('status');
 const diagEl = document.getElementById('diag');
-let ready = false, bgmOn = false, song = 1;
+let ready = false, bgmOn = true, song = 1, view = 0;
+
+// --- input ----------------------------------------------------------------
+// The pad bits FUN_00430f50 packs out of its key table at DAT_00444c20, with
+// the same keys the table has.  WinGL's layout, so this is the same map as in
+// the author's windepth_wasm.
+const PAD = {
+  KeyK: 0x0001, ArrowUp: 0x0001, Numpad8: 0x0001,
+  KeyJ: 0x0002, ArrowDown: 0x0002, Numpad2: 0x0002,
+  KeyH: 0x0004, ArrowLeft: 0x0004, Numpad4: 0x0004,
+  KeyL: 0x0008, ArrowRight: 0x0008, Numpad6: 0x0008,
+  KeyZ: 0x0010, Space: 0x0010,
+  KeyX: 0x0020, Enter: 0x0020,
+  ShiftLeft: 0x0040, ShiftRight: 0x0040,
+  KeyQ: 0x0080,
+  F2: 0x1000,
+  Escape: 0x8000,
+};
+let pad = 0;
 
 // --- audio ----------------------------------------------------------------
 // The music is synthesised inside the wasm module and pulled out here:
@@ -116,10 +138,11 @@ var Module = {
     const w = Module._sd_width(), h = Module._sd_height();
     const img = ctx2d.createImageData(w, h);
     statusEl.textContent = 'パターン ' + Module._sd_patterns() +
-      ' 枚 / F4 で BGM（クリックかキーで音を許可）';
+      ' 枚 / クリックかキーで音が出ます';
 
     // 33ms, the tick WinMain arms: FUN_00424870(this, 0x21, 200, 0).
     setInterval(() => {
+      Module._sd_set_pad(pad);
       Module._sd_tick();
       const p = Module._sd_framebuffer();
       img.data.set(Module.HEAPU8.subarray(p, p + w * h * 4));
@@ -127,11 +150,13 @@ var Module = {
     }, 33);
 
     setInterval(() => {
-      diagEl.textContent = actx
-        ? `audio ${actx.state} ${actx.sampleRate}Hz  blocks ${musBlocks}` +
-          `  queued ${Math.max(0, musNext - actx.currentTime).toFixed(2)}s` +
-          `  bgm${String(song).padStart(2, '0')}.mid`
-        : 'audio: 未開始（クリックか何かキーを押してください）';
+      const st = Module._sd_state().toString(16).padStart(2, '0');
+      diagEl.textContent =
+        `state ${st}  ${Module._sd_fps()}fps  pad ${pad.toString(16)}  ` +
+        (actx
+          ? `audio ${actx.state} ${actx.sampleRate}Hz  blocks ${musBlocks}` +
+            `  queued ${Math.max(0, musNext - actx.currentTime).toFixed(2)}s`
+          : 'audio: 未開始（クリックか何かキーを押してください）');
     }, 500);
   }
 };
@@ -139,8 +164,18 @@ var Module = {
 addEventListener('keydown', e => {
   ensureContext();
   if (!ready) return;
-  if (e.code === 'Digit1') { Module._sd_set_scene(0); e.preventDefault(); return; }
-  if (e.code === 'Digit2') { Module._sd_set_scene(1); e.preventDefault(); return; }
+  if (PAD[e.code] !== undefined) {
+    pad |= PAD[e.code];
+    e.preventDefault();
+    return;
+  }
+  if (e.code === 'Digit0' || e.code === 'Digit1' || e.code === 'Digit2') {
+    view = e.code.charCodeAt(5) - 48;
+    Module._sd_set_view(view);
+    statusEl.textContent = ['ゲーム', '文字とスプライト', 'パターン一覧'][view];
+    e.preventDefault();
+    return;
+  }
   if (e.code === 'F4') {
     bgmOn = !bgmOn;
     Module._sd_set_bgm(bgmOn ? 1 : 0);
@@ -148,12 +183,19 @@ addEventListener('keydown', e => {
     e.preventDefault();
     return;
   }
-  if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
-    song += e.code === 'ArrowRight' ? 1 : -1;
+  // In the two gallery views the brackets pick a song to listen to.
+  if (view !== 0 && (e.code === 'BracketRight' || e.code === 'BracketLeft')) {
+    song += e.code === 'BracketRight' ? 1 : -1;
     if (song < 1) song = 15;
     if (song > 15) song = 1;
     Module._sd_set_song(song);
     statusEl.textContent = 'bgm' + String(song).padStart(2, '0') + '.mid';
+    e.preventDefault();
+  }
+});
+addEventListener('keyup', e => {
+  if (PAD[e.code] !== undefined) {
+    pad &= ~PAD[e.code];
     e.preventDefault();
   }
 });

@@ -1,22 +1,27 @@
 /* Emscripten front end.
  *
- * The game logic is not ported yet, so what this shows is the part that is:
- * the .dar archives, the 640x480 8bpp surface, the original's fonts and its
- * sprites, and the BGM through the synthesiser.  The page owns the clock and
- * the audio callback, exactly as in the author's windepth_wasm.
+ * The page owns the clock, the keyboard and the audio, exactly as in the
+ * author's windepth_wasm; everything else is the game (src/game.c) drawing
+ * into the 640x480 8bpp surface (src/video.c) out of the .dar archives.
  *
- *   - the surface is expanded through the archive's palette into an RGBA
- *     buffer and handed to the page, which does one putImageData a frame.
- *     No WebGL: everything rasterises in software.
+ *   - the surface is expanded through the palette into an RGBA buffer and
+ *     handed to the page, which does one putImageData a frame.  No WebGL:
+ *     everything rasterises in software.
  *   - the data is baked in with --embed-file, so dar_load() and
  *     mus_load_file() keep using fopen() the way the native tools do.
  *   - the music is synthesised here (src/synth.c) and pulled by the page.
+ *
+ * Two extra views are kept alongside the game for looking at the material
+ * that has been decoded - the fonts and sprites, and a sheet of every
+ * pattern.  They are the port's own, not something the original has.
  */
 #include <emscripten.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "dar.h"
+#include "game.h"
 #include "synth.h"
 #include "video.h"
 
@@ -24,37 +29,75 @@
 
 static Dar g_dar;
 static Video g_vid;
+static Game g_game;
 static unsigned char g_rgba[SCR_W * SCR_H * 4];
 static int g_ready;
 static unsigned g_frame;
-static int g_scene;                     /* which demo screen is up */
+static int g_view;                      /* 0 the game, 1 fonts, 2 sheet */
 
 static Music g_mus;
 static float g_al[AUDIO_MAX], g_ar[AUDIO_MAX];
-static int g_song = 1, g_bgm_on;
+static int g_song = 1, g_bgm_on = 1;
+static char g_bgm[64];                  /* what the game last asked for */
+static int g_bgm_mode;
+
+static void music_apply(void);
+
+/* ---- what the game asks of the front end ------------------------------ */
+
+int plat_dar(Dar *d, const char *name)
+{
+    char path[96];
+
+    sprintf(path, "/disk/%s", name);
+    return dar_load(d, path);
+}
+
+/* FUN_00420980(mode, name): 0..3 start a song, 4 stops.  Modes 2 and 3 leave
+ * the same song playing rather than restarting it (FUN_00420090's first
+ * test).  Whether a mode also means "loop" is not read out of SMFDrv yet;
+ * the call sites say it must - bgm01 is a 3.8 second logo jingle started
+ * with 0, bgm02 the 43 second title music started with 1 - so 0 plays once
+ * and the rest loop.  That is a reading of the call sites, not the driver. */
+void plat_bgm(int mode, const char *name)
+{
+    if (mode == 4) {
+        g_bgm[0] = 0;
+        mus_stop(&g_mus);
+        return;
+    }
+    if ((mode == 2 || mode == 3) && !strcmp(g_bgm, name)) return;
+    strncpy(g_bgm, name, sizeof g_bgm - 1);
+    g_bgm[sizeof g_bgm - 1] = 0;
+    g_bgm_mode = mode;
+    music_apply();
+}
+
+/* ---- the surface ------------------------------------------------------ */
 
 static void expand(void)
 {
     unsigned *out = (unsigned *)g_rgba;
     const unsigned char *src = &g_vid.px[0][0];
+    const unsigned char (*pal)[3] = vid_palette(&g_vid);
     unsigned lut[256];
     int i, n = SCR_W * SCR_H;
 
     for (i = 0; i < 256; i++)
-        lut[i] = 0xff000000u | ((unsigned)g_dar.pal[i][2] << 16) |
-                 ((unsigned)g_dar.pal[i][1] << 8) | g_dar.pal[i][0];
+        lut[i] = 0xff000000u | ((unsigned)pal[i][2] << 16) |
+                 ((unsigned)pal[i][1] << 8) | pal[i][0];
     for (i = 0; i < n; i++) out[i] = lut[src[i]];
 }
 
-/* Scene 0: the fonts and a few sprites, the way sd_shot's `text` mode draws
- * them.  Scene 1: a sheet of the 16x16 and 32x32 sprite banks. */
-static void draw_scene(void)
+/* View 1: the fonts and a few sprites.  View 2: a sheet of the sprite banks.
+ * Neither is in the original; they are here to show what has been decoded. */
+static void draw_view(void)
 {
     char line[64];
     int i;
 
     vid_clear(&g_vid, 0);
-    if (g_scene == 0) {
+    if (g_view == 1) {
         vid_text(&g_vid, 0x22, 5, "SUPER DEPTH", FNT_CYAN);
         vid_text(&g_vid, 0x1e, 7, "for Windows", FNT_WHITE);
         vid_text(&g_vid, 0x24, 10, "Ready", FNT_RED);
@@ -90,9 +133,11 @@ EMSCRIPTEN_KEEPALIVE int sd_init(void)
 {
     if (dar_load(&g_dar, "/disk/depth.dar") != 0) return -1;
     vid_init(&g_vid, &g_dar);
+    game_init(&g_game, &g_vid);
     mus_init(&g_mus, 44100);
     g_ready = 1;
-    draw_scene();
+    /* No frame is run here: the original does nothing until its first timer
+     * tick either, so the page gets a black screen for one frame. */
     expand();
     return 0;
 }
@@ -101,34 +146,59 @@ EMSCRIPTEN_KEEPALIVE int sd_width(void) { return SCR_W; }
 EMSCRIPTEN_KEEPALIVE int sd_height(void) { return SCR_H; }
 EMSCRIPTEN_KEEPALIVE unsigned char *sd_framebuffer(void) { return g_rgba; }
 EMSCRIPTEN_KEEPALIVE int sd_patterns(void) { return g_dar.count; }
-EMSCRIPTEN_KEEPALIVE int sd_scene(void) { return g_scene; }
-EMSCRIPTEN_KEEPALIVE void sd_set_scene(int n) { g_scene = n ? 1 : 0; }
-EMSCRIPTEN_KEEPALIVE int sd_song(void) { return g_song; }
+EMSCRIPTEN_KEEPALIVE int sd_view(void) { return g_view; }
+EMSCRIPTEN_KEEPALIVE int sd_state(void) { return g_game.state; }
+EMSCRIPTEN_KEEPALIVE int sd_fps(void) { return g_game.fps; }
+EMSCRIPTEN_KEEPALIVE void sd_set_pad(int pad) { game_set_pad(&g_game, (unsigned)pad); }
+
+EMSCRIPTEN_KEEPALIVE void sd_set_view(int n)
+{
+    g_view = n < 0 ? 0 : (n > 2 ? 2 : n);
+    if (g_view == 0) music_apply();     /* back to whatever the game wants */
+}
 
 EMSCRIPTEN_KEEPALIVE void sd_tick(void)
 {
     if (!g_ready) return;
-    draw_scene();
+    if (g_view == 0) {
+        time_t t = time(NULL);
+        struct tm *lt = localtime(&t);
+        /* GetLocalTime's wSecond is all the game uses the clock for. */
+        game_set_second(&g_game, lt ? lt->tm_sec : 0);
+        game_tick(&g_game);
+    } else {
+        draw_view();
+    }
     expand();
 }
 
-/* --- music ------------------------------------------------------------- */
+/* ---- music ------------------------------------------------------------ */
 
 static void music_apply(void)
 {
-    char path[64];
+    char path[96];
 
-    if (!g_bgm_on) { mus_stop(&g_mus); return; }
+    mus_stop(&g_mus);
+    if (!g_bgm_on) return;
+    if (g_view == 0) {
+        if (!g_bgm[0]) return;
+        sprintf(path, "/disk/%s.mid", g_bgm);
+        if (mus_load_file(&g_mus, path) == 0)
+            mus_play(&g_mus, g_bgm_mode == 0 ? 0 : 1);
+        return;
+    }
     sprintf(path, "/disk/bgm%02d.mid", g_song);
     if (mus_load_file(&g_mus, path) == 0) mus_play(&g_mus, 1);
 }
+
+EMSCRIPTEN_KEEPALIVE int sd_song(void) { return g_song; }
 
 EMSCRIPTEN_KEEPALIVE void sd_set_song(int n)
 {
     if (n < 1) n = 1;
     if (n > 15) n = 15;
     g_song = n;
-    if (g_bgm_on) music_apply();
+    music_apply();
 }
 
 EMSCRIPTEN_KEEPALIVE void sd_set_bgm(int on)

@@ -83,8 +83,10 @@ function png(w, h, rgba) {
   const w = Module._sd_width(), h = Module._sd_height();
   ok(w === 640 && h === 480, 'the surface is 640x480');
   ok(Module._sd_patterns() === 2887, 'depth.dar has 2887 patterns');
+  ok(Module._sd_state() === 0x0a, 'the game starts in state 0x0a');
 
   for (let t = 0; t < ticks; t++) Module._sd_tick();
+  ok(Module._sd_state() === 0x10, 'and is in the logo after a few frames');
   const p = Module._sd_framebuffer();
   const rgba = Buffer.from(Module.HEAPU8.subarray(p, p + w * h * 4));
 
@@ -113,6 +115,11 @@ function png(w, h, rgba) {
     }
   }
   const rms = Math.sqrt(sum / count);
+
+  // 46 frames for the logo to come up, 0x78 of waiting, 46 to go away.
+  for (let t = ticks; t < 170; t++) Module._sd_tick();
+  ok(Module._sd_state() === 0x1e, 'the logo hands over to the title (state ' +
+     Module._sd_state().toString(16) + ')');
   ok(peak > 0.01, 'the synthesiser makes a signal (peak ' + peak.toFixed(3) + ')');
   ok(peak <= 1.0, 'and it does not clip');
   console.log(`frame ${ticks} -> ${out}  (${lit} lit)  music peak ${peak.toFixed(3)} rms ${rms.toFixed(4)}`);
