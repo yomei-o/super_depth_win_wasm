@@ -3,7 +3,7 @@
 Classifies the noise away: code labels, the pattern table (0x470bd8 + p*0x34),
 and the 28-int object arrays whose base the port already has.
 
-    python globals2.py FUN_0040f970 [FUN_...]
+    python tools/globals.py FUN_0040f970 [FUN_...]
 """
 import io
 import re
