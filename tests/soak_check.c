@@ -92,8 +92,8 @@ int main(int argc, char **argv)
 
         /* Exit really does quit in the original, so the port sits on the
          * credits for ever; start over so the soak keeps moving. */
-        if (game.state == ST_VERSION || game.hook == HOOK_SPACE) {
-            /* HOOK_SPACE is the stage that is not ported: nothing there
+        if (game.state == ST_VERSION || game.hook == HOOK_BOSS) {
+            /* HOOK_BOSS is the stage that is not ported: nothing there
              * moves, so start over rather than sit in it. */
             game_init(&game, &vid);
             game_set_date(&game, 1999, 2, 14);
@@ -105,6 +105,14 @@ int main(int argc, char **argv)
             p->kills = p->quota;
             for (i = 0; i < p->nenemy; i++)
                 p->e[i].y = game.hook == HOOK_PLAY ? 0 : -0x20;
+            p->onscreen = 0;
+            p->item = 0;
+        }
+        /* the space stage ends when its script does, so wind that on too */
+        if (t % 5000 == 4999 && game.hook == HOOK_SPACE) {
+            p->sc_at = p->nscript;
+            p->sc_wait = 0;
+            for (i = 0; i < p->nenemy; i++) p->e[i].kind = 0;
             p->onscreen = 0;
             p->item = 0;
         }

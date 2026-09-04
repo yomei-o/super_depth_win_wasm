@@ -76,7 +76,8 @@ enum { HOOK_NONE = 0,
        HOOK_AIR = 4,                    /* LAB_004011ae -> FUN_0040c9e0 */
        HOOK_PAUSE = 5,                  /* LAB_00401041 -> FUN_0040b960 */
        HOOK_AIRCLEAR = 6,               /* LAB_004010d2 -> FUN_0040f490 */
-       HOOK_SPACE = 7 };                /* LAB_0040110e -> FUN_0040f970 */
+       HOOK_SPACE = 7,                  /* LAB_0040110e -> FUN_0040f970 */
+       HOOK_BOSS = 8 };                 /* LAB_004011c7 -> FUN_00403dc0 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -201,5 +202,8 @@ void play_status_bar(Game *g);          /* FUN_004093d0 */
 /* src/air.c */
 void air_frame(Game *g);                /* FUN_0040c9e0, the stage after one */
 void air_clear_frame(Game *g);          /* FUN_0040f490, its own clear */
+
+/* src/space.c */
+void space_frame(Game *g);              /* FUN_0040f970, the stage after that */
 
 #endif

@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 
 CC="sh tools/cc.sh -O2 -Wall -Isrc"
 CORE="src/dar.c src/gfx.c src/video.c"
-GAME="src/game.c src/play.c src/air.c"
+GAME="src/game.c src/play.c src/air.c src/space.c"
 
 mkdir -p tmp
 
@@ -23,6 +23,7 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/title_check.exe tests/title_check.c src/png.c $CORE $GAME
     $CC -o tmp/play_check.exe  tests/play_check.c src/png.c $CORE $GAME
     $CC -o tmp/air_check.exe   tests/air_check.c src/png.c $CORE $GAME
+    $CC -o tmp/space_check.exe tests/space_check.c src/png.c $CORE $GAME
     $CC -o tmp/soak_check.exe  tests/soak_check.c $CORE $GAME
     $CC -o tmp/unlib.exe     tools/unlib.c tools/blast.c -Itools
     $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
@@ -39,6 +40,7 @@ if [ "$what" = check ]; then
     ./tmp/title_check.exe
     ./tmp/play_check.exe
     ./tmp/air_check.exe
+    ./tmp/space_check.exe
     ./tmp/soak_check.exe 60000
     ./tmp/sd_shot.exe raw disk/depth.dar tmp/native_60.bin 60 >/dev/null
     echo "== shots"

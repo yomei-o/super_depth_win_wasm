@@ -50,6 +50,13 @@ typedef struct {
     int chain;              /* [16]  how many went up with it */
     int anim, animt;        /* [20] [21]  kind 5's three frames */
     int face;               /* [22]  kind 1's second sprite pair */
+    /* the space stage uses more of the record (src/space.c) */
+    int mirror;             /* [-2] one frame of white after a hit */
+    int hp;                 /* [15] the kinds that take more than one */
+    int c1, c2;             /* [17] [18] */
+    int phase;              /* [23] which step of its own dance */
+    int tick;               /* [24] */
+    int layer;              /* [25] which of the two draw passes */
 } Enemy;
 
 typedef struct {            /* DAT_004a5490 */
@@ -76,10 +83,33 @@ typedef struct { int x, y, vx, kind; } Star;  /* DAT_004a9110, 256 of them */
 
 /* The air stage (src/air.c).  The ship shoots upward and the aircraft drop
  * two kinds of bomb; the arrays are the same 28-int records again. */
-typedef struct { int x, y, dx; } UpShot;    /* DAT_00461358, y < -0xf free */
+typedef struct {            /* DAT_00461358, y < -0xf means free */
+    int x, y;
+    int dx;                 /* the up/down spread: the air stage's +0x20,
+                             * the space stage's +0x24 - each stage sets the
+                             * array up itself, so one field does for both */
+    int vx;                 /* +0x08, only the space stage (it shoots
+                             * sideways) */
+} UpShot;
 typedef struct { int x, y, vy; } Bomb;      /* DAT_00461a70, y >= 0x160 free */
 typedef struct { int x, y, vx, vy; } ABomb; /* DAT_00463dd8, y >= 0x160 free */
 typedef struct { int x, y, kind; } Cloud;   /* DAT_004a8a58, 4 ints, the rain */
+
+/* The space stage (src/space.c).  The script is stage3.bin turned into
+ * FUN_00413df0's runtime form: six ints an entry, and the entry after the
+ * last one has type 0xff. */
+typedef struct { int type, v, a, b, c, d; } Script;
+typedef struct { int x, y, vx, on; } Big;   /* DAT_004bb148, the big shots */
+typedef struct { int x, y, kind; } Star2;   /* DAT_004a8a40, the starfield */
+typedef struct {                            /* DAT_004ba940, FUN_00413ae0 */
+    int k1, k2, k3, k4;
+    int x, y, vy, a;
+} Dust;
+
+#define SCRIPTS 320
+#define BIGS    64
+#define STARS2  64
+#define DUSTS   64
 
 #define UPSHOTS 16
 #define BOMBS   16
@@ -158,6 +188,21 @@ typedef struct {
     int ncloud;             /* DAT_004b18d0 */
     int ac_timer;           /* DAT_004b18c8 */
     int ac_scroll;          /* DAT_004b18cc */
+
+    /* the space stage */
+    Script script[SCRIPTS];
+    int nscript;
+    int sc_at;              /* DAT_004ba92c, where the script is up to */
+    int sc_wait;            /* DAT_004b78dc */
+    Big big[BIGS];
+    int big_timer;          /* DAT_004ba938 */
+    int flash2;             /* DAT_004ba930, one white frame */
+    int emerg;              /* DAT_004ba934, the EMERGENCY countdown */
+    Star2 star2[STARS2];
+    int drift_x, drift_y;   /* DAT_004a8a50 / DAT_004a8a54 */
+    Dust dust[DUSTS];
+    int scroll_n;           /* DAT_004b78d8, how fast the sky goes past */
+    int spacex[2], spacey[2], spacevx[2];   /* DAT_004ba8e8, the two pictures */
 
     /* the pause menu (FUN_0040b960) */
     int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */

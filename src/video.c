@@ -147,6 +147,41 @@ void vid_pat_centre(Video *v, int cx, int cy, int pat)
     vid_pat_raw(v, cx - p->w / 2, cy - p->h / 2, pat);
 }
 
+void vid_pat_flash(Video *v, int x, int y, int pat)
+{
+    const DarPat *p = vid_pat_info(v, pat);
+    const Dar *d;
+
+    if (!p) return;
+    if (y >= 0x1f1) return;
+    if (!(-0x21 < p->w + x && x < 0x261)) return;
+    if (y < -p->h) return;
+    d = pat >= EXT_BASE ? v->ext : v->dar;
+    if (!d) return;
+    dar_draw_solid(d, pat >= EXT_BASE ? pat - EXT_BASE : pat, &v->px[0][0],
+                   SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, 0xff);
+}
+
+void vid_pat_scale(Video *v, int x, int y, int pat, int sx)
+{
+    const DarPat *p = vid_pat_info(v, pat);
+    const Dar *d;
+    int wide;
+
+    if (!p) return;
+    if (y >= 0x1f1) return;
+    if (!(-0x21 < p->w + x && x < 0x261)) return;
+    if (y < -p->h) return;
+    /* FUN_00409120 keeps the middle where it was: the left edge moves in by
+     * half of what the width lost. */
+    wide = (p->w * sx) >> 8;
+    x += p->w / 2 - wide / 2;
+    d = pat >= EXT_BASE ? v->ext : v->dar;
+    if (!d) return;
+    dar_draw_scale(d, pat >= EXT_BASE ? pat - EXT_BASE : pat, &v->px[0][0],
+                   SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, sx);
+}
+
 static void text_px(Video *v, int col, int y, const char *s, int bank)
 {
     int x = col * 8;

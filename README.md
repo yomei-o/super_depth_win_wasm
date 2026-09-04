@@ -44,7 +44,8 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
       （`python tools/dar.py disk/staff.dar sheet.png`）
 * [x] **描画層** — `src/video.c`。640x480 の 8bpp、パターン描画（`y + 0x20`
       と原作のクリップつき）、原作のフォントの引きかた（`base + ASCII`）、
-      行ごとに正弦でずらす描画（`vid_pat_wave`）
+      行ごとに正弦でずらす描画（`vid_pat_wave`）、当たった敵の白い影
+      （`vid_pat_flash`）、横に縮める描画（`vid_pat_scale`）
 * [x] **BGM** — 原作の SMF を自前で合成する（`src/smf.c` / `src/synth.c` は
       user 自身の [windepth_wasm](https://github.com/yomei-o/windepth_wasm)
       から。同じ Bio_100% の WinDepth 用に書かれたもの）
@@ -58,8 +59,10 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 * [x] **2 面目（空の面）**（`src/air.c`）— `FUN_0040c9e0` と
       そのクリア `FUN_0040f490`。艦は下で上に撃ち、飛行機 5 種が爆弾を
       落とす。クリアすると艦がロケットで宇宙へ上がる
-* [ ] **3 面目（宇宙の面）**（`FUN_0040f970`、2058 行）と 4 面目
-      （`FUN_00403dc0`、917 行）。読み終えて RESUME に下調べを書いた
+* [x] **3 面目（宇宙の面）**（`src/space.c`）— `FUN_0040f970`。
+      自機は上下左右に動いて左右に撃つ。出てくるものは乱数ではなく
+      **`stage3.bin` の台本 275 手**で決まる。弾も敵と同じ配列に入る
+* [ ] **4 面目**（`FUN_00403dc0`、917 行）。読み終えて RESUME に下調べ
 * [x] 得点表の保存 — 原作はレジストリ、ここはページの localStorage
 * [x] `stage3.bin` — **3 面（宇宙）の台本**。0x20 の頭 + 24 バイト x 275。
       海と空の面の敵は `0x43fae8` の表、宇宙の面だけこのファイル
@@ -79,6 +82,7 @@ native の道具と検査を全部作って走らせ、PNG を `tmp/` に吐く�
 | `tmp/title_check.exe` | タイトル、メニュー、記録画面、デモへの落ち |
 | `tmp/play_check.exe` | 面の作り、艦、爆雷と当たり、面クリア、ポーズ、名前入力、デモ再生 |
 | `tmp/air_check.exe` | 空の面（移動・射撃・当たり・クリアの演出） |
+| `tmp/space_check.exe` | 宇宙の面（台本 275 手・敵 12 種・弾・得点） |
 | `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか |
 | `tests/wasm_check.js` | WASM を node で動かして 1 枚描き、音が出ているか、**native と 1 バイトも違わないか** |
 

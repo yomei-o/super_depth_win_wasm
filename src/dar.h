@@ -59,6 +59,19 @@ int dar_draw(const Dar *d, int n, unsigned char *out, int stride,
 int dar_draw_wave(const Dar *d, int n, unsigned char *out, int stride,
                   int outW, int outH, int x, int y, const short *rowdx);
 
+/* Every pixel written as `colour` instead of its own: the shape of the
+ * pattern in one colour, which is how WinGL draws a thing that has just been
+ * hit (FUN_00409090 hands the blitter a translate table that maps 0..0xfe to
+ * 0xff, so the whole sprite comes out white). */
+int dar_draw_solid(const Dar *d, int n, unsigned char *out, int stride,
+                   int outW, int outH, int x, int y, int colour);
+
+/* Squeezed sideways: `sx` is 8.8, so 0x100 is 1:1 and 0x80 is half width.
+ * One destination column takes the first source pixel that reaches it, which
+ * is the rule FUN_0041b850 uses. */
+int dar_draw_scale(const Dar *d, int n, unsigned char *out, int stride,
+                   int outW, int outH, int x, int y, int sx);
+
 /* Which pattern carries this name, or -1.  The game looks patterns up by
  * name at load time (`PatEntryName('%s')`). */
 int dar_find(const Dar *d, const char *name);

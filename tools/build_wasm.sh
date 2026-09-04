@@ -32,7 +32,8 @@ done
 
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \
-   src/main_wasm.c src/game.c src/play.c src/air.c src/video.c src/dar.c \
+   src/main_wasm.c src/game.c src/play.c src/air.c src/space.c \
+   src/video.c src/dar.c \
    src/smf.c src/synth.c \
    $EMBED \
    -s MODULARIZE=0 -s EXPORTED_RUNTIME_METHODS=HEAPU8,HEAPF32,UTF8ToString \
