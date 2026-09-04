@@ -134,6 +134,27 @@ function png(w, h, rgba) {
   ok(peak <= 1.0, 'and it does not clip');
   console.log(`frame ${ticks} -> ${out}  (${lit} lit)  music peak ${peak.toFixed(3)} rms ${rms.toFixed(4)}`);
 
+  // The same number of ticks with no keys at all must come out identical to
+  // what the native build drew - the port has one copy of the game, and this
+  // is what says so.
+  const want = 'tmp/native_60.bin';
+  if (fs.existsSync(want)) {
+    const ref = fs.readFileSync(want);
+    Module._sd_init();                          // start over from frame 0
+    for (let t = 0; t < 60; t++) Module._sd_tick();
+    const sp = Module._sd_surface();
+    const got = Buffer.from(Module.HEAPU8.subarray(sp, sp + w * h));
+    ok(ref.length === got.length, 'the native surface is the same size');
+    let diff = 0;
+    for (let i = 0; i < got.length && i < ref.length; i++)
+      if (got[i] !== ref[i]) diff++;
+    ok(diff === 0, 'and identical to the wasm one (' + diff + ' pixels differ)');
+    console.log('native vs wasm at frame 60: ' +
+                (diff === 0 ? 'identical' : diff + ' pixels differ'));
+  } else {
+    console.log('(no ' + want + ', skipping the native comparison)');
+  }
+
   if (fails) { console.log(fails + ' checks failed'); process.exit(1); }
   console.log('wasm checks passed');
 })();

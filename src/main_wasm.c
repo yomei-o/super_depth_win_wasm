@@ -184,6 +184,10 @@ EMSCRIPTEN_KEEPALIVE int sd_init(void)
 EMSCRIPTEN_KEEPALIVE int sd_width(void) { return SCR_W; }
 EMSCRIPTEN_KEEPALIVE int sd_height(void) { return SCR_H; }
 EMSCRIPTEN_KEEPALIVE unsigned char *sd_framebuffer(void) { return g_rgba; }
+
+/* The 8bpp surface itself, so a frame here can be compared byte for byte
+ * with the one the native tools draw. */
+EMSCRIPTEN_KEEPALIVE unsigned char *sd_surface(void) { return &g_vid.px[0][0]; }
 EMSCRIPTEN_KEEPALIVE int sd_patterns(void) { return g_dar.count; }
 EMSCRIPTEN_KEEPALIVE int sd_view(void) { return g_view; }
 EMSCRIPTEN_KEEPALIVE int sd_state(void) { return g_game.state; }

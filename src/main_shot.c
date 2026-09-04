@@ -6,6 +6,7 @@
  *     tmp/sd_shot.exe list  disk/depth.dar               names and sizes
  *     tmp/sd_shot.exe game  disk/depth.dar out.png 30    the game, 30 frames
  *     tmp/sd_shot.exe play  disk/depth.dar out.png 30    30 frames of play
+ *     tmp/sd_shot.exe raw   disk/depth.dar out.bin 30    the 8bpp surface
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -149,6 +150,27 @@ int main(int argc, char **argv)
             return 1;
         }
         printf("%s -> %s (%d of %d patterns fitted)\n", argv[2], argv[3], i, dar.count);
+        return 0;
+    }
+    if (!strcmp(argv[1], "raw")) {
+        /* The surface as bytes, for the wasm build to be compared against.
+         * The state machine is driven with no keys at all, so both sides see
+         * exactly the same input. */
+        static Video vid;
+        static Game game;
+        int frames = argc > 4 ? atoi(argv[4]) : 1, i;
+        FILE *f;
+
+        vid_init(&vid, &dar);
+        game_init(&game, &vid);
+        game_set_date(&game, 1999, 2, 14);
+        for (i = 0; i < frames; i++) game_tick(&game);
+        f = fopen(argv[3], "wb");
+        if (!f) { fprintf(stderr, "cannot write %s\n", argv[3]); return 1; }
+        fwrite(&vid.px[0][0], 1, (size_t)(SCR_W * SCR_H), f);
+        fclose(f);
+        printf("%d frames -> %s (%d bytes, state %02x)\n", frames, argv[3],
+               SCR_W * SCR_H, game.state);
         return 0;
     }
     if (!strcmp(argv[1], "play")) {

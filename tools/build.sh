@@ -38,6 +38,7 @@ if [ "$what" = check ]; then
     ./tmp/title_check.exe
     ./tmp/play_check.exe
     ./tmp/air_check.exe
+    ./tmp/sd_shot.exe raw disk/depth.dar tmp/native_60.bin 60 >/dev/null
     echo "== shots"
     ./tmp/sd_shot.exe sheet disk/depth1.dar tmp/sheet_sea.png
     ./tmp/sd_shot.exe pat   disk/staff.dar  tmp/biologo.png 0
