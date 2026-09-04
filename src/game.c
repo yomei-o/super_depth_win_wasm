@@ -613,9 +613,13 @@ static void st_play(Game *g)
         play_frame(g);
         break;
     case HOOK_CLEAR:
-        /* FUN_00408210, the stage-clear pan, is not ported yet. */
-        vid_text(g->v, 0x18, 8, "STAGE CLEAR", FNT_YELLOW);
-        vid_text8_at(g->v, 0x1e, 0x16, "FUN_00408210 is not ported yet");
+        play_clear_frame(g);
+        break;
+    case HOOK_AIR:
+        /* FUN_0040c9e0 - the next mode, which is the one the screenshots in
+         * disk/depth3.jpg and depth4.jpg show - is not ported yet. */
+        vid_text(g->v, 0x1a, 8, "Stage Clear", FNT_YELLOW);
+        vid_text8_at(g->v, 0x1c, 0x16, "FUN_0040c9e0 is not ported yet");
         break;
     case HOOK_OVER:
         /* FUN_0040bdb0, the name entry, is not ported yet. */

@@ -184,6 +184,43 @@ int main(void)
     ok(p->e[0].y == 0 && p->e[0].state == 10,
        "and the slot comes back when the explosion ends");
 
+    /* The points go up over whatever was hit: the kind's worth times ten,
+     * and the chain after an x when there was one. */
+    {
+        int found = -1;
+        for (i = 0; i < POPUPS; i++)
+            if (p->pop[i].t > 0) { found = i; break; }
+        ok(found >= 0, "a popup goes up with the points");
+        if (found >= 0) {
+            ok(p->pop[found].value == 50, "worth fifty, which is five times ten");
+            ok(p->pop[found].chain == 1, "and no chain");
+        }
+    }
+
+    /* Meeting the quota with the screen clear ends the stage: the camera
+     * follows the ship up to the surface and the stage number goes up. */
+    start_game();
+    p->hit = 1;
+    for (i = 0; i < p->nenemy; i++) { p->e[i].y = 0; p->e[i].state = 10; }
+    p->kills = p->quota;
+    p->onscreen = 0;
+    game_tick(&game);
+    ok(game.hook == HOOK_CLEAR, "the quota ends the stage");
+    game_tick(&game);                   /* the clear's own first frame */
+    ok(!strcmp(bgm_last, "bgm09") && bgm_mode_last == 0, "and plays bgm09 once");
+    {
+        int y0 = p->py, stage0 = p->stage;
+        for (t = 0; t < 25; t++) game_tick(&game);
+        ok(p->py == y0, "the ship holds still for the first 0x1e frames");
+        for (t = 0; t < 40; t++) game_tick(&game);
+        ok(p->py > y0, "then the camera follows it up");
+        shot("tmp/play_clear.png");
+        for (t = 0; t < 200 && game.hook == HOOK_CLEAR; t++) game_tick(&game);
+        ok(p->py == 0x120, "it stops at the surface");
+        ok(game.hook == HOOK_AIR, "and hands over to what comes next");
+        ok(p->stage == stage0 + 1, "with the stage number up one");
+    }
+
     /* Left alone, the ship gets sunk and loses a life; with no lives left
      * the game is over. */
     start_game();

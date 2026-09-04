@@ -204,6 +204,50 @@ static void item_apply(Play *p)
     }
 }
 
+/* FUN_0040b6c0: put the points up over whatever was hit. */
+static void popup_add(Play *p, int x, int y, int value, int chain)
+{
+    int i;
+
+    for (i = 0; i < POPUPS; i++)
+        if (p->pop[i].t == 0) {
+            p->pop[i].t = 0x3c;
+            p->pop[i].value = value;
+            p->pop[i].x = x;
+            p->pop[i].y = y;
+            p->pop[i].chain = chain;
+            return;
+        }
+}
+
+/* FUN_0040b740: draw them, blinking out over the last sixteen frames. */
+static void popups_draw(Game *g)
+{
+    Play *p = &g->p;
+    char line[24];
+    int i;
+
+    for (i = 0; i < POPUPS; i++) {
+        Popup *q = &p->pop[i];
+        int len, x;
+
+        if (q->t <= 0) continue;
+        q->t--;
+        if (q->chain == 1) sprintf(line, "%d", q->value);
+        else sprintf(line, "%dx%d", q->value, q->chain);
+        len = (int)strlen(line);
+        x = q->x - len * 4;
+        if (x < 0x20) {
+            x = 0x20;
+        } else {
+            int cap = (0x4c - len) * 8;
+            if (cap < x) x = cap;
+        }
+        if (q->t < 0x10 && q->t % 2 == 0) continue;
+        vid_text8(g->v, x, q->y + 0x1c, line);
+    }
+}
+
 /* FUN_0040acf0: an enemy has been hit.  Its own speed is halved (the wreck
  * drifts), the death animation starts, the score goes up by the kind's worth
  * times the chain, and a popup says so.  The popup itself is not ported yet;
@@ -221,7 +265,8 @@ static void enemy_hit(Game *g, int i, int chain)
     worth = SCORE[p->cycle][e->kind];
     p->score += worth * chain;
     se_at("burn", e->x + 0x18);
-    (void)worth;
+    if (worth * chain > 0)
+        popup_add(p, e->w / 2 + e->x, e->h / 2 + e->y, worth * 10, chain);
 }
 
 /* FUN_0040aa20: build the field for a stage out of the kind table. */
@@ -641,7 +686,9 @@ static void play_status(Game *g)
     if (p->demo == 1) {
         if (g->frame % 0x10 < 8)
             vid_text(v, 0x1c, 10, "DEMONSTRATION", FNT_RED);
+        popups_draw(g);
     } else {
+        popups_draw(g);
         if (p->banner != 0) {           /* FUN_0040a8e0 */
             vid_text(v, 0x24, 10, "Ready", FNT_RED);
             p->banner--;
@@ -1055,4 +1102,102 @@ void play_frame(Game *g)
             g->hook_arg = 1;
         }
     }
+}
+
+/* FUN_00408210: the stage is over.  The camera follows the ship up to the
+ * surface - the sky tiles and the sea bed slide down by eight a frame while
+ * the ship's own y rises - and then hands over to whatever comes next.
+ *
+ * depth1.dar's own patterns do the sky here: 0xb4c is sky01 on the water
+ * line, 0xb4d (sky02) is tiled above it and 0xb4e (sky03) sits at the top.
+ */
+void play_clear_frame(Game *g)
+{
+    Play *p = &g->p;
+    Video *v = g->v;
+    const DarPat *sky, *up, *top, *sea;
+    char line[16];
+    int x, y, n, band;
+
+    if (g->hook_arg) {
+        g->hook_arg = 0;
+        p->announce = 0;                /* FUN_0040a9f0 */
+        p->over = 0;
+        p->banner = 0;
+        plat_bgm(0, "bgm09");
+        p->cl_step = 0;
+    }
+
+    sky = vid_pat_info(v, EXT_BASE + 5);
+    up = vid_pat_info(v, EXT_BASE + 6);
+    top = vid_pat_info(v, EXT_BASE + 7);
+    sea = vid_pat_info(v, EXT_BASE);
+    if (!sky || !up || !top || !sea) return;
+
+    switch (p->cl_step) {
+    case 0:
+        p->cl_timer = 0;
+        p->cl_sky = 0x2a - sky->h;
+        p->cl_step++;
+        p->cl_ground = 0;
+        p->cl_row = ((0x120 - p->py) / 8) * -8;
+        if (++p->cl_timer > 0x1d) { p->cl_step++; p->cl_timer = 0; }
+        break;
+    case 1:
+        if (++p->cl_timer > 0x1d) { p->cl_step++; p->cl_timer = 0; }
+        break;
+    case 2:
+        p->py += 8;
+        p->cl_ground += 8;
+        p->cl_sky += 8;
+        p->cl_row += 8;
+        if (p->py > 0x11f) {
+            p->cl_step++;
+            p->py = 0x120;
+        }
+        /* falls through, as the original does */
+    case 3:
+        if (++p->cl_timer > 0x3b) {
+            g->hook = HOOK_AIR;         /* FUN_0040c9e0 */
+            g->hook_arg = 1;
+            p->stage++;
+        }
+        break;
+    }
+
+    for (x = 0x20; x < 0x260; x += sky->w)
+        vid_pat(v, x, p->cl_sky, EXT_BASE + 5);
+    for (x = 0x20; x < 0x260; x += up->w)
+        for (y = p->cl_sky - up->h; y >= -up->h; y -= up->h)
+            vid_pat(v, x, y, EXT_BASE + 6);
+    for (x = 0x20; x < 0x260; x += top->w)
+        if (p->cl_row >= 0x20 - top->h)
+            vid_pat(v, x, p->cl_row, EXT_BASE + 7);
+    for (x = 0x20; x < 0x260; x += sea->w) {
+        vid_pat(v, x, p->py + 0x19, EXT_BASE);
+        band = 0;
+        y = sea->h + 0x19 + p->py;
+        while (y < 0x160) {
+            const DarPat *q;
+            n = EXT_BASE + 1;
+            if (band == 2) n = EXT_BASE + 2;
+            else if (band == 3 || band == 4) n = EXT_BASE + 3;
+            vid_pat(v, x, y, n);
+            q = vid_pat_info(v, n);
+            if (!q || q->h <= 0) break;
+            y += q->h;
+            band++;
+        }
+    }
+    vid_pat(v, p->px, p->py, 0xa05);
+    if (p->cl_ground < 0x28)
+        for (x = 0x20; x < 0x260; x += 0x20) {
+            if (p->stage == 1 || p->stage == 9)
+                vid_pat(v, x, p->cl_ground + 0x141, 0x9d3);
+            else if (p->stage == 5)
+                vid_pat(v, x, p->cl_ground + 0x141, 0x9d4);
+        }
+    vid_text(v, 0x22, 10, "Clear!", FNT_YELLOW);
+    (void)line;
+    play_status(g);
 }

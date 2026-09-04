@@ -72,7 +72,8 @@ typedef struct {
 enum { HOOK_NONE = 0,
        HOOK_PLAY = 1,                   /* LAB_00401168 -> FUN_00405c10 */
        HOOK_CLEAR = 2,                  /* LAB_00401235 -> FUN_00408210 */
-       HOOK_OVER = 3 };                 /* LAB_004011b3 -> FUN_0040bdb0 */
+       HOOK_OVER = 3,                   /* LAB_004011b3 -> FUN_0040bdb0 */
+       HOOK_AIR = 4 };                  /* LAB_004011ae -> FUN_0040c9e0 */
 
 /* DAT_004bf164, WinGL's overlay hook, armed by FUN_004148f0(fn, 1). */
 enum { DRAW_NONE = 0, DRAW_MENU = 1,    /* LAB_0040118b -> FUN_00414920 */
@@ -168,5 +169,6 @@ void game_scene(Game *g, const char *name, int count);
 
 /* src/play.c */
 void play_frame(Game *g);
+void play_clear_frame(Game *g);         /* FUN_00408210, the stage clear */
 
 #endif

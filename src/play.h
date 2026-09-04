@@ -63,6 +63,15 @@ typedef struct { int x, y; } Torp;          /* DAT_004a4d88, y <= 0x20 free */
 typedef struct { int x, y, vx; } EShot;     /* DAT_004a5b90, y < -0xf free */
 typedef struct { int frame, x, y; } Splash; /* DAT_004a5fa4, frame 4 = free */
 
+typedef struct {            /* DAT_004a8548, 5 ints, 64 of them */
+    int t;                  /* [0]  0x3c down to 0, and 0 = free */
+    int value;              /* [1]  the points, already multiplied by ten */
+    int x, y;               /* [2] [3] */
+    int chain;              /* [4]  1 = show the number on its own */
+} Popup;
+
+#define POPUPS 64
+
 typedef struct {
     /* the player - a ship, so only x moves */
     int px, py;             /* DAT_004644dc / DAT_004644d8 */
@@ -110,6 +119,14 @@ typedef struct {
     Torp t[TORPS];
     EShot s[ESHOTS];
     Splash sp[SPLASHES];
+    Popup pop[POPUPS];
+
+    /* the stage-clear pan (FUN_00408210) */
+    int cl_step;            /* DAT_004a84e4 */
+    int cl_timer;           /* DAT_004a84ec */
+    int cl_sky;             /* DAT_004a84e0 */
+    int cl_ground;          /* DAT_004a84e8 */
+    int cl_row;             /* DAT_004a84f0 */
 } Play;
 
 #endif
