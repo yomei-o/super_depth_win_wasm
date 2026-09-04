@@ -369,6 +369,40 @@ int main(void)
     ok(game.recat > 0, "the recording is being read");
     shot("tmp/play_demo.png");
 
+    /* Play the original's own recording right through.  This is the best
+     * check in the repo: demo1.dat was recorded on the original, so the
+     * recorded pad only makes sense against the enemies the random sequence
+     * puts there.  It reads all 8235 frames, plays the sea, air and space
+     * stages and gets as far as the big one, and comes out at the logo
+     * because the recording ran out - not because the ship was sunk.
+     *
+     * It was this check that found the chain reactions were off (DAT_00463da8
+     * was a Play field, so play_clear zeroed what FUN_00402480 sets once at
+     * startup): with them off the run died in the sea stage at frame 2584
+     * with 10 kills. */
+    {
+        int hits = 0, at = 0;
+
+        for (t = 0; t < 12000; t++) {
+            int was = p->life;
+
+            game_tick(&game);
+            if (game.state != ST_DEMO) break;
+            if (p->life < 10 && was == 10) hits++;
+            at = t;
+        }
+        printf("  the recording: %d of %d frames read, score %d, stage %d, "
+               "%d hits, out at frame %d (state %02x)\n",
+               game.recat, game.reclen, p->score, p->stage, hits, at + 302,
+               game.state);
+        ok(game.reclen == 8235, "demo1.dat is 8235 frames");
+        ok(game.recat == game.reclen, "and every one of them is played");
+        ok(p->stage == 4, "which gets as far as the fourth stage");
+        ok(p->score == 4622, "for 46220 points");
+        ok(hits == 4, "with four hits taken");
+        ok(game.state == ST_LOGO, "and the recording running out ends it");
+    }
+
     if (fails) { printf("%d checks failed\n", fails); return 1; }
     printf("play checks passed  (tmp/play_hit.png, tmp/play_demo.png)\n");
     return 0;

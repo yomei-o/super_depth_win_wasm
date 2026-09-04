@@ -160,7 +160,6 @@ typedef struct {
     int canim, cframe;      /* DAT_004a5f0c / DAT_004a5f94, the charge sprite */
     int flip;              /* DAT_0046216c, flips every frame */
     int powerA, powerB;     /* DAT_004644d4 / DAT_0046134c, the two power-ups */
-    int echain;             /* DAT_00463da8, chain reactions on/off */
     int sunk;               /* DAT_00463dc8, charges that reached the bottom */
 
     int item;               /* DAT_00463dc0, 0 = none, else the kind */

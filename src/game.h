@@ -108,6 +108,12 @@ typedef struct {
     int demo;                           /* DAT_00464ed8, 0 = a person plays */
     int hook, hook_arg;                 /* DAT_004492c8 / DAT_004492ac */
     int boxes;                          /* DAT_00462168, the debug outlines */
+    /* DAT_00463da8: whether one wreck sets off the next.  FUN_00402480 (the
+     * window being made) sets it to 1 and nothing clears it - it is outside
+     * everything FUN_0040b250 wipes - so the chains are on for the whole run
+     * unless the debug menu's 0x86a turns them off.  It was a Play field
+     * here, which meant play_clear zeroed it and no chain ever happened. */
+    int echain;
 
     int logo_row[LOGO_ROWS];            /* DAT_0044653c: 1 = that row is hidden */
     int logo_left;                      /* DAT_004492b8, rows still hidden */
@@ -229,6 +235,7 @@ void staff_frame(Game *g);              /* FUN_00414210 */
  * by the resource's own ids.  Answers non-zero when the command was one of
  * them.  See the head of src/ending.c. */
 enum { MENU_RESET = 0x860,              /* this one is in both menus */
+       DBG_CHAIN = 0x86a,               /* the chains, on at startup */
        DBG_BOX_ON = 0x84c, DBG_BOX_OFF = 0x84d,
        DBG_STAGE01 = 0x84e, DBG_STAGE02 = 0x84f, DBG_STAGE03 = 0x850,
        DBG_STAGE04 = 0x851, DBG_STAGE05 = 0x852, DBG_STAGE06 = 0x853,

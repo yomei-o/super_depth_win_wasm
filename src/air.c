@@ -398,7 +398,7 @@ void air_frame(Game *g)
     }
 
     /* chain reactions, with the air stage's own boxes */
-    if (p->echain) {
+    if (g->echain) {
         for (i = 0; i < p->nenemy; i++) {
             Enemy *a = &p->e[i];
             if (a->state <= 3 || a->state >= 9) continue;

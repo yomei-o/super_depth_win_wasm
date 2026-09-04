@@ -961,7 +961,7 @@ void play_frame(Game *g)
 
     /* Chain reactions: an enemy in the middle of blowing up takes anything
      * it touches with it, and the chain multiplies the score. */
-    if (p->echain) {
+    if (g->echain) {
         for (i = 0; i < p->nenemy; i++) {
             Enemy *a = &p->e[i];
             if (a->state <= 3 || a->state >= 9) continue;

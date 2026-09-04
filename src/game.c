@@ -741,6 +741,7 @@ void game_init(Game *g, Video *v)
 
     memset(g, 0, sizeof *g);
     g->v = v;
+    g->echain = 1;      /* FUN_00402480 */
     /* FUN_00402610's defaults for the score table.  The original then reads
      * the registry over the top of them (FUN_004026f0); a browser has no
      * registry, and nothing can score yet, so the defaults are all there is
@@ -783,6 +784,9 @@ int game_debug(Game *g, int cmd)
     case MENU_RESET:                    /* 0x4260f7, ゲーム -> リセット */
         plat_bgm(4, "");                /* the name is only read to play */
         game_set_state(g, ST_BOOT);
+        return 1;
+    case DBG_CHAIN:                     /* 0x426240 */
+        g->echain = !g->echain;
         return 1;
     case DBG_BOX_ON:                    /* 0x4262ca */
         g->boxes = 1;
