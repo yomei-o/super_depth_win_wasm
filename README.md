@@ -79,6 +79,7 @@ native の道具と検査を全部作って走らせ、PNG を `tmp/` に吐く�
 | `tmp/title_check.exe` | タイトル、メニュー、記録画面、デモへの落ち |
 | `tmp/play_check.exe` | 面の作り、艦、爆雷と当たり、面クリア、ポーズ、名前入力、デモ再生 |
 | `tmp/air_check.exe` | 空の面（移動・射撃・当たり・クリアの演出） |
+| `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか |
 | `tests/wasm_check.js` | WASM を node で動かして 1 枚描き、音が出ているか、**native と 1 バイトも違わないか** |
 
 絵は `tmp/sd_shot.exe` で見る:

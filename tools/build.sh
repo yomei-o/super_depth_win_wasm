@@ -23,6 +23,7 @@ if [ "$what" = all ] || [ "$what" = native ] || [ "$what" = check ]; then
     $CC -o tmp/title_check.exe tests/title_check.c src/png.c $CORE $GAME
     $CC -o tmp/play_check.exe  tests/play_check.c src/png.c $CORE $GAME
     $CC -o tmp/air_check.exe   tests/air_check.c src/png.c $CORE $GAME
+    $CC -o tmp/soak_check.exe  tests/soak_check.c $CORE $GAME
     $CC -o tmp/unlib.exe     tools/unlib.c tools/blast.c -Itools
     $CC -o tmp/midi2wav.exe  tests/midi2wav.c src/smf.c src/synth.c -lm
 fi
@@ -38,6 +39,7 @@ if [ "$what" = check ]; then
     ./tmp/title_check.exe
     ./tmp/play_check.exe
     ./tmp/air_check.exe
+    ./tmp/soak_check.exe 60000
     ./tmp/sd_shot.exe raw disk/depth.dar tmp/native_60.bin 60 >/dev/null
     echo "== shots"
     ./tmp/sd_shot.exe sheet disk/depth1.dar tmp/sheet_sea.png
