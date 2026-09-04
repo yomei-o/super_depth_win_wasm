@@ -122,6 +122,10 @@ typedef struct {
     int quit;                           /* state 0x5a's PostQuitMessage */
 
     Rank rank[RANKS];                   /* DAT_004bf9dc */
+    /* Not the original: it writes each record straight into the registry
+     * (FUN_004026f0).  A browser has no registry, so the front end watches
+     * this counter and keeps the table wherever it can. */
+    int rank_stamp;
 
     Play p;                             /* the game itself, src/play.c */
 

@@ -173,12 +173,38 @@ function playSe(name, pan) {
   src.start();
 }
 
+// The score table.  The original keeps it in the registry
+// (HKCU\\Software\\Bio_100%\\SuperDepth, one 40 byte value a row); here it
+// goes into localStorage as hex, and the module tells us when it changed.
+const RANK_KEY = 'superdepth.rank';
+let rankStamp = 0;
+
+function rankLoad() {
+  let hex;
+  try { hex = localStorage.getItem(RANK_KEY); } catch (e) { return; }
+  if (!hex) return;
+  const p = Module._sd_rank_ptr(), n = Module._sd_rank_len();
+  if (hex.length !== n * 2) return;
+  for (let i = 0; i < n; i++)
+    Module.HEAPU8[p + i] = parseInt(hex.substr(i * 2, 2), 16);
+}
+
+function rankSave() {
+  const p = Module._sd_rank_ptr(), n = Module._sd_rank_len();
+  let hex = '';
+  for (let i = 0; i < n; i++)
+    hex += Module.HEAPU8[p + i].toString(16).padStart(2, '0');
+  try { localStorage.setItem(RANK_KEY, hex); } catch (e) { /* private mode */ }
+}
+
 var Module = {
   onRuntimeInitialized() {
     if (Module._sd_init() !== 0) {
       statusEl.textContent = 'depth.dar を読めませんでした';
       return;
     }
+    rankLoad();
+    rankStamp = Module._sd_rank_stamp();
     ready = true;
     ensurePump();
     const w = Module._sd_width(), h = Module._sd_height();
@@ -192,6 +218,10 @@ var Module = {
       Module._sd_tick();
       const se = Module._sd_se_take();
       if (se) playSe(Module.UTF8ToString(se), Module._sd_se_pan());
+      if (Module._sd_rank_stamp() !== rankStamp) {
+        rankStamp = Module._sd_rank_stamp();
+        rankSave();
+      }
       const p = Module._sd_framebuffer();
       img.data.set(Module.HEAPU8.subarray(p, p + w * h * 4));
       ctx2d.putImageData(img, 0, 0);

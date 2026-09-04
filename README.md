@@ -57,7 +57,7 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
       面クリアの演出・ポーズ・ゲームオーバーの名前入力
 * [ ] **面クリアの次のモード**（`FUN_0040c9e0`、1329 行）。空の面らしい
       （`disk/depth3.jpg` / `depth4.jpg` の画面）
-* [ ] 得点表の保存（原作はレジストリ）
+* [x] 得点表の保存 — 原作はレジストリ、ここはページの localStorage
 * [ ] `stage3.bin` — **本体はこれを読まない**（面の敵は `0x43fae8` の表）
 
 ## 検査

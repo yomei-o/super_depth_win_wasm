@@ -19,6 +19,7 @@ EXPORTS=$EXPORTS,_sd_patterns,_sd_view,_sd_set_view,_sd_song,_sd_set_song
 EXPORTS=$EXPORTS,_sd_set_bgm,_sd_audio_init,_sd_audio,_sd_audio_left
 EXPORTS=$EXPORTS,_sd_audio_right,_sd_audio_max,_sd_set_pad,_sd_state
 EXPORTS=$EXPORTS,_sd_fps,_sd_se_take,_sd_se_pan
+EXPORTS=$EXPORTS,_sd_rank_ptr,_sd_rank_len,_sd_rank_stamp
 
 EMBED="--embed-file disk/depth.dar@/disk/depth.dar"
 EMBED="$EMBED --embed-file disk/demo1.dat@/disk/demo1.dat"

@@ -190,6 +190,16 @@ EMSCRIPTEN_KEEPALIVE int sd_state(void) { return g_game.state; }
 EMSCRIPTEN_KEEPALIVE int sd_fps(void) { return g_game.fps; }
 EMSCRIPTEN_KEEPALIVE void sd_set_pad(int pad) { game_set_pad(&g_game, (unsigned)pad); }
 
+/* The score table, so the page can keep it: ten records of 40 bytes, laid
+ * out exactly as the original writes them into the registry. */
+EMSCRIPTEN_KEEPALIVE unsigned char *sd_rank_ptr(void)
+{
+    return (unsigned char *)g_game.rank;
+}
+
+EMSCRIPTEN_KEEPALIVE int sd_rank_len(void) { return (int)sizeof g_game.rank; }
+EMSCRIPTEN_KEEPALIVE int sd_rank_stamp(void) { return g_game.rank_stamp; }
+
 EMSCRIPTEN_KEEPALIVE void sd_set_view(int n)
 {
     g_view = n < 0 ? 0 : (n > 2 ? 2 : n);

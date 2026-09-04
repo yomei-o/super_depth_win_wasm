@@ -1480,6 +1480,7 @@ void play_over_frame(Game *g)
                         sizeof g->rank[p->rankin].date - 1);
                 g->rank[p->rankin].score = p->score;
                 g->rank[p->rankin].stage = p->stage;
+                g->rank_stamp++;        /* the front end saves it */
                 g->clear_next = 1;      /* DAT_004492cc */
                 game_set_state(g, ST_TITLE);
                 g->hook = HOOK_NONE;

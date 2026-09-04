@@ -333,8 +333,9 @@ Flash Bomb / Shot Special / Full Power / Ship 1up。
      敵は同じ 64 枠を使い、`0x46135c` `0x461a74` `0x463de0` の配列を
      新たに初期化する
    * ~~ゲームオーバーと名前入力~~ 済み（`play_over_frame`）。
-     **得点表の保存だけ残っている** —— 原作はレジストリ、ここは
-     ページの localStorage に置くのが自然
+     得点表の保存も入れた —— 原作はレジストリ（`rank%d` に 0x28 バイト）、
+     ここは `sd_rank_ptr` / `sd_rank_stamp` を見てページが localStorage
+     に hex で置く
    * ~~ポーズ画面~~ 済み（`play_pause_frame`）
    * 録画の書き出し（`FUN_004031d0`、状態 0x35）
 10. ~~効果音~~ 半分済み。名前は上の表、ページが `disk/*.wav` を
