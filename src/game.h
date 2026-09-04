@@ -198,6 +198,7 @@ void play_item_apply(Play *p);          /* FUN_0040aab0 */
 void play_item_name(Game *g, int x, int y, int kind);   /* FUN_0040b1c0 */
 void play_boom(Video *v, int x, int y, int frame);      /* FUN_0040ae50 */
 void play_status_bar(Game *g);          /* FUN_004093d0 */
+int  play_score_of(const Play *p, int kind);            /* 0x43fe70's table */
 
 /* src/air.c */
 void air_frame(Game *g);                /* FUN_0040c9e0, the stage after one */
@@ -205,5 +206,8 @@ void air_clear_frame(Game *g);          /* FUN_0040f490, its own clear */
 
 /* src/space.c */
 void space_frame(Game *g);              /* FUN_0040f970, the stage after that */
+
+/* src/boss.c */
+void boss_frame(Game *g);               /* FUN_00403dc0, the fourth kind */
 
 #endif

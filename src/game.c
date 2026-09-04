@@ -617,9 +617,7 @@ static void st_play(Game *g)
         space_frame(g);
         break;
     case HOOK_BOSS:
-        /* FUN_00403dc0, the fourth kind, is not ported yet. */
-        vid_text(g->v, 0x1a, 8, "Stage Clear", FNT_YELLOW);
-        vid_text8_at(g->v, 0x1c, 0x16, "FUN_00403dc0 is not ported yet");
+        boss_frame(g);
         break;
     case HOOK_OVER:
         play_over_frame(g);

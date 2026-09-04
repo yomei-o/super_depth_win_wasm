@@ -67,11 +67,13 @@ static const int STAGE_KIND[16][16] = {
 
 /* 0x43fe70, 0x1e ints a row, indexed by the four-stage cycle and the kind. */
 static const int SCORE[5][12] = {
-    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 },
+    { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11 },   /* row 0 is never read */
     { 1, 5, 30, 20, 50, 30, 0, 0, 0, 10, 0, 0 },
     { 2, 10, 20, 30, 50, 10, 0, 0, 0, 10, 0, 0 },
     { 3, 10, 20, 30, 200, 10, 11, 12, 13, 10, 20, 0 },
-    { 0 }                               /* the fourth row is not read yet */
+    /* the fourth cycle is the boss stage: 1000 for finishing it and 10 a
+     * hit (the boss stage reads [1] and [2] of its own row) */
+    { 4, 1000, 10, 20, 500, 20, 0, 0, 0, 0, 0, 0 }
 };
 
 /* One kind's slot in the stage table, the way FUN_0040aa20 reads it: 64
@@ -264,6 +266,15 @@ static void popups_draw(Game *g)
         if (q->t < 0x10 && q->t % 2 == 0) continue;
         vid_text8(g->v, x, q->y + 0x1c, line);
     }
+}
+
+/* 0x43fe70 read with this stage's cycle and a kind - the boss stage wants
+ * the same numbers for its own hits. */
+int play_score_of(const Play *p, int kind)
+{
+    if (p->cycle < 0 || p->cycle > 4) return 0;
+    if (kind < 0 || kind > 11) return 0;
+    return SCORE[p->cycle][kind];
 }
 
 /* FUN_0040acf0: an enemy has been hit.  Its own speed is halved (the wreck

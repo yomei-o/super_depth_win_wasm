@@ -15,9 +15,10 @@ Copyright(C)1998-1999 Bio_100% Inc.
 
 **遊べます: https://yomei-o.github.io/super_depth_win_wasm/**
 
-<kbd>←</kbd><kbd>→</kbd> で艦を動かし、<kbd>Z</kbd> で船首側、<kbd>X</kbd>
-で船尾側に爆雷を落とす。<kbd>Esc</kbd> でポーズ。1 分放っておくと原作の
-録画（`demo1.dat`）が再生される。
+海の面は <kbd>←</kbd><kbd>→</kbd> で艦を動かし、<kbd>Z</kbd> で船首側、
+<kbd>X</kbd> で船尾側に爆雷を落とす。空と宇宙では上下にも動き、
+<kbd>Z</kbd> と <kbd>X</kbd> が別々の向きの弾になる。<kbd>Esc</kbd> で
+ポーズ。1 分放っておくと原作の録画（`demo1.dat`）が再生される。
 
 同じやり方の前作: [soko_ban_wasm](https://github.com/yomei-o/soko_ban_wasm)、
 [lord_monarch_wasm](https://github.com/yomei-o/lord_monarch_wasm)、
@@ -25,8 +26,9 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 
 ## いまの状態
 
-**ひと勝負が最後まで通る。** ロゴ → タイトル → ゲーム → 面クリア →
-ゲームオーバー → 名前入力 → 得点表 → タイトル。
+**面が 4 種類とも動き、輪になって回る。**
+ロゴ → タイトル → 海 → 空 → 宇宙 → 大物 → また海 …。
+沈められればゲームオーバー → 名前入力 → 得点表 → タイトル。
 
 * [x] **インストーラの解体** — `depth-build115.exe` から 45 ファイル
       （`python tools/unpack.py`、`disk/` に出る。三層ぜんぶ解いてあり、
@@ -62,7 +64,9 @@ PC-98 版の [super_depth_wasm](https://github.com/yomei-o/super_depth_wasm)
 * [x] **3 面目（宇宙の面）**（`src/space.c`）— `FUN_0040f970`。
       自機は上下左右に動いて左右に撃つ。出てくるものは乱数ではなく
       **`stage3.bin` の台本 275 手**で決まる。弾も敵と同じ配列に入る
-* [ ] **4 面目**（`FUN_00403dc0`、917 行）。読み終えて RESUME に下調べ
+* [x] **4 面目（大物）**（`src/boss.c`）— `FUN_00403dc0`。30 発で
+      崩れて 8 つに割れ、**面番号が 1 に戻って海の面へ** —— 4 種類の面が
+      輪になって回る（`disk/depth5.jpg` の画面）
 * [x] 得点表の保存 — 原作はレジストリ、ここはページの localStorage
 * [x] `stage3.bin` — **3 面（宇宙）の台本**。0x20 の頭 + 24 バイト x 275。
       海と空の面の敵は `0x43fae8` の表、宇宙の面だけこのファイル
@@ -83,7 +87,8 @@ native の道具と検査を全部作って走らせ、PNG を `tmp/` に吐く�
 | `tmp/play_check.exe` | 面の作り、艦、爆雷と当たり、面クリア、ポーズ、名前入力、デモ再生 |
 | `tmp/air_check.exe` | 空の面（移動・射撃・当たり・クリアの演出） |
 | `tmp/space_check.exe` | 宇宙の面（台本 275 手・敵 12 種・弾・得点） |
-| `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか |
+| `tmp/boss_check.exe` | 大物の面（寄ってくる・弱点・30 発・8 つに割れて海へ戻る） |
+| `tmp/soak_check.exe` | 40 万フレーム適当に遊んで、数え間違い（枠の数・カーソル・面番号…）が出ないか。4 種類の面ぜんぶ通る |
 | `tests/wasm_check.js` | WASM を node で動かして 1 枚描き、音が出ているか、**native と 1 バイトも違わないか** |
 
 絵は `tmp/sd_shot.exe` で見る:

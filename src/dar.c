@@ -182,19 +182,27 @@ int dar_draw_solid(const Dar *d, int n, unsigned char *out, int stride,
 }
 
 int dar_draw_scale(const Dar *d, int n, unsigned char *out, int stride,
-                   int outW, int outH, int x0, int y0, int sx)
+                   int outW, int outH, int x0, int y0, int sx, int sy)
 {
     const DarPat *p;
     int y;
 
     if (n < 0 || n >= d->count) return -1;
-    if (sx <= 0) return 0;
+    if (sx <= 0 || sy <= 0) return 0;
     p = &d->pat[n];
     for (y = 0; y < p->h; y++) {
+        /* Which destination rows this source row covers: FUN_0041b6f0 walks
+         * the same 8.8 accumulator down the picture. */
+        int r0 = (y * sy) >> 8;
+        int r1 = ((y + 1) * sy) >> 8;
+        int rep;
+
+        if (r1 <= r0) r1 = r0 + (sy >= 0x100 ? 1 : 0);
+        for (rep = r0; rep < r1; rep++) {
         const unsigned char *q = d->data + p->at +
                                  (long)(p->h - 1 - y) * p->stride;
         const unsigned char *end = q + p->stride;
-        int ty = y0 + y;
+        int ty = y0 + rep;
         int x = 0;
         long at = 0;                    /* where we are in the source, 8.8 */
         int last = -1;                  /* the destination column just done */
@@ -210,14 +218,25 @@ int dar_draw_scale(const Dar *d, int n, unsigned char *out, int stride,
             at += (long)clear * sx;
             if (run == 0) break;
             for (i = 0; i < run; i++, x++, at += sx) {
-                int tx = x0 + (int)(at >> 8);
+                /* The columns this source pixel covers.  Growing, it fills
+                 * several; shrinking, `last` keeps only the first pixel that
+                 * reaches a column - which is what FUN_0041b850 does. */
+                int j0 = (int)(at >> 8);
+                int j1 = (int)((at + sx) >> 8);
+                int j;
+
                 if (x >= p->w) break;
-                if ((int)(at >> 8) == last) continue;
-                last = (int)(at >> 8);
-                if (ty < 0 || ty >= outH || tx < 0 || tx >= outW) continue;
-                out[(long)ty * stride + tx] = q[i];
+                if (j1 <= j0) j1 = j0 + 1;
+                for (j = j0; j < j1; j++) {
+                    int tx = x0 + j;
+                    if (j == last) continue;
+                    last = j;
+                    if (ty < 0 || ty >= outH || tx < 0 || tx >= outW) continue;
+                    out[(long)ty * stride + tx] = q[i];
+                }
             }
             q += (run + 3) & ~3;
+        }
         }
     }
     return 0;

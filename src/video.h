@@ -113,7 +113,7 @@ void vid_pat_flash(Video *v, int x, int y, int pat);
 /* FUN_00409120 -> FUN_0041b6f0 + FUN_0041b850: the pattern squeezed
  * sideways, `sx` in 8.8 and centred the way the original centres it (the
  * vertical scale is always 0x100 where the game uses this). */
-void vid_pat_scale(Video *v, int x, int y, int pat, int sx);
+void vid_pat_scale(Video *v, int x, int y, int pat, int sx, int sy);
 
 /* FUN_00402980: the row is in 16-pixel units. */
 void vid_text(Video *v, int col, int row, const char *s, int bank);

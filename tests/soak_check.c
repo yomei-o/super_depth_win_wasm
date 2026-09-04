@@ -73,7 +73,7 @@ int main(int argc, char **argv)
     long t;
     int i;
     int seen_state[0x100];
-    int seen_hook[8];
+    int seen_hook[16];
 
     if (dar_load(&dar, "disk/depth.dar") != 0) {
         printf("FAIL cannot read disk/depth.dar\n");
@@ -90,11 +90,9 @@ int main(int argc, char **argv)
         game_set_second(&game, (int)((t / 30) % 60));
         game_tick(&game);
 
-        /* Exit really does quit in the original, so the port sits on the
-         * credits for ever; start over so the soak keeps moving. */
-        if (game.state == ST_VERSION || game.hook == HOOK_BOSS) {
-            /* HOOK_BOSS is the stage that is not ported: nothing there
-             * moves, so start over rather than sit in it. */
+        if (game.state == ST_VERSION) {
+            /* Exit really does quit in the original, so the port sits on
+             * the credits for ever; start over so the soak keeps moving. */
             game_init(&game, &vid);
             game_set_date(&game, 1999, 2, 14);
             continue;
@@ -108,18 +106,19 @@ int main(int argc, char **argv)
             p->onscreen = 0;
             p->item = 0;
         }
-        /* the space stage ends when its script does, so wind that on too */
-        if (t % 5000 == 4999 && game.hook == HOOK_SPACE) {
-            p->sc_at = p->nscript;
-            p->sc_wait = 0;
-            for (i = 0; i < p->nenemy; i++) p->e[i].kind = 0;
-            p->onscreen = 0;
-            p->item = 0;
+        /* the boss takes thirty hits: give it them now and then */
+        if (t % 1000 == 999 && game.hook == HOOK_BOSS) p->boss_hits = 0x1e;
+        /* The space stage only ends when its script does and the ship is
+         * alive, and this player keeps getting killed - so hand it on
+         * outright, which is what the script's end does. */
+        if (t % 1000 == 999 && game.hook == HOOK_SPACE) {
+            game.hook = HOOK_BOSS;
+            game.hook_arg = 1;
         }
 
         if (game.state >= 0 && game.state < 0x100) seen_state[game.state]++;
         else bad("the state is out of range", (int)t, game.state);
-        if (game.hook >= 0 && game.hook < 8) seen_hook[game.hook]++;
+        if (game.hook >= 0 && game.hook < 16) seen_hook[game.hook]++;
         else bad("the hook is out of range", (int)t, game.hook);
 
         /* the counters the slot scans lean on */
@@ -180,7 +179,7 @@ int main(int argc, char **argv)
     for (i = 0; i < 0x100; i++)
         if (seen_state[i]) printf(" %02x(%d)", i, seen_state[i]);
     printf("\n  hooks:");
-    for (i = 0; i < 8; i++)
+    for (i = 0; i < 16; i++)
         if (seen_hook[i]) printf(" %d(%d)", i, seen_hook[i]);
     printf("\n  score %d, stage %d, top %d\n", p->score, p->stage,
            game.rank[0].score);

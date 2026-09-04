@@ -162,24 +162,26 @@ void vid_pat_flash(Video *v, int x, int y, int pat)
                    SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, 0xff);
 }
 
-void vid_pat_scale(Video *v, int x, int y, int pat, int sx)
+void vid_pat_scale(Video *v, int x, int y, int pat, int sx, int sy)
 {
     const DarPat *p = vid_pat_info(v, pat);
     const Dar *d;
-    int wide;
+    int wide, tall;
 
     if (!p) return;
     if (y >= 0x1f1) return;
     if (!(-0x21 < p->w + x && x < 0x261)) return;
     if (y < -p->h) return;
-    /* FUN_00409120 keeps the middle where it was: the left edge moves in by
-     * half of what the width lost. */
+    /* FUN_00409120 keeps the middle where it was: each edge moves in by half
+     * of what that side lost (or out by half of what it gained). */
     wide = (p->w * sx) >> 8;
+    tall = (p->h * sy) >> 8;
     x += p->w / 2 - wide / 2;
+    y += p->h / 2 - tall / 2;
     d = pat >= EXT_BASE ? v->ext : v->dar;
     if (!d) return;
     dar_draw_scale(d, pat >= EXT_BASE ? pat - EXT_BASE : pat, &v->px[0][0],
-                   SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, sx);
+                   SCR_W, SCR_W, SCR_H, x, y + SCR_YOFF, sx, sy);
 }
 
 static void text_px(Video *v, int col, int y, const char *s, int bank)

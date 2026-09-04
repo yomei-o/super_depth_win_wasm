@@ -70,7 +70,7 @@ int dar_draw_solid(const Dar *d, int n, unsigned char *out, int stride,
  * One destination column takes the first source pixel that reaches it, which
  * is the rule FUN_0041b850 uses. */
 int dar_draw_scale(const Dar *d, int n, unsigned char *out, int stride,
-                   int outW, int outH, int x, int y, int sx);
+                   int outW, int outH, int x, int y, int sx, int sy);
 
 /* Which pattern carries this name, or -1.  The game looks patterns up by
  * name at load time (`PatEntryName('%s')`). */

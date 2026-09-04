@@ -43,18 +43,17 @@
 <div id="status">読み込み中…</div>
 <div id="diag"></div>
 <div class="keys" style="max-width:60em">
-  <b>遊べます。</b>Bio_100% のロゴ（0x10）→ 海のタイトル（0x1e）→
-  Game Start でゲーム本体（0x32）まで移植しました。潜水艦を爆雷で沈める
-  ゲームです。<kbd>←</kbd><kbd>→</kbd> で艦を動かし、<kbd>Z</kbd> で船首
+  <b>遊べます。</b>原作の 4 種類の面をぜんぶ移植しました。潜水艦を
+  爆雷で沈めるゲームです。<kbd>←</kbd><kbd>→</kbd> で艦を動かし、<kbd>Z</kbd> で船首
   側、<kbd>X</kbd> で船尾側に爆雷を落とします。1 分放っておくと原作の
   録画（demo1.dat）を再生するデモが始まります。
   <kbd>Esc</kbd> か <kbd>F2</kbd> でポーズ。沈められると名前を入れて
   得点表に残せます（<kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd>
   で文字を選び <kbd>Z</kbd>、END で決定）。
-  1 面をクリアすると 2 面（空）、その次は 3 面（宇宙）—— 宇宙では
-  上下にも動けて左右に撃ちます。出てくるものは原作の
-  <code>stage3.bin</code> の台本どおりです。
-  <b>まだ無いもの</b>: 4 面（<code>FUN_00403dc0</code>）。
+1 面（海）→ 2 面（空）→ 3 面（宇宙）→ 4 面（大物）と進み、
+  大物を 30 発で倒すと 1 面に戻って**輪になって回ります**。空と宇宙では
+  上下にも動けて、<kbd>Z</kbd> と <kbd>X</kbd> が別の向きの弾です。
+  宇宙に出てくるものは原作の <code>stage3.bin</code> の台本どおり。
   <kbd>1</kbd><kbd>2</kbd> は原作から取り出した絵の展示で、これは移植の
   ついでに作ったものです。
   <a href="https://github.com/yomei-o/super_depth_win_wasm">ソースと解析メモ</a>

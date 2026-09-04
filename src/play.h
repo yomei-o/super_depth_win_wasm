@@ -92,7 +92,11 @@ typedef struct {            /* DAT_00461358, y < -0xf means free */
                              * sideways) */
 } UpShot;
 typedef struct { int x, y, vy; } Bomb;      /* DAT_00461a70, y >= 0x160 free */
-typedef struct { int x, y, vx, vy; } ABomb; /* DAT_00463dd8, y >= 0x160 free */
+typedef struct {            /* DAT_00463dd8, y >= 0x160 means free */
+    int x, y, vx, vy;
+    int t;                  /* +0x14, the boss stage's homing counter -
+                             * nothing in this build ever sets it */
+} ABomb;
 typedef struct { int x, y, kind; } Cloud;   /* DAT_004a8a58, 4 ints, the rain */
 
 /* The space stage (src/space.c).  The script is stage3.bin turned into
@@ -106,7 +110,15 @@ typedef struct {                            /* DAT_004ba940, FUN_00413ae0 */
     int x, y, vy, a;
 } Dust;
 
+typedef struct {            /* DAT_004a4858, 8 ints, 64 of them */
+    int on;
+    int x, y;
+    int frame, sub;         /* it steps every third frame */
+    int kind;               /* 0x10 small, 0xc0 the big one at three times */
+} Boom;
+
 #define SCRIPTS 320
+#define BOOMS   64
 #define BIGS    64
 #define STARS2  64
 #define DUSTS   64
@@ -203,6 +215,15 @@ typedef struct {
     Dust dust[DUSTS];
     int scroll_n;           /* DAT_004b78d8, how fast the sky goes past */
     int spacex[2], spacey[2], spacevx[2];   /* DAT_004ba8e8, the two pictures */
+
+    /* the boss stage (src/boss.c) */
+    Boom boom[BOOMS];
+    int gun_dx[4], gun_x[4], gun_y[4];  /* DAT_004a4c58 / 68 / 78 */
+    int gunfire;            /* DAT_004a4850, how many ports are out */
+    int boss_hits;          /* DAT_004a4c88, thirty and it is finished */
+    int boss_phase;         /* DAT_004a4c8c */
+    int boss_cool;          /* DAT_004a4c90 */
+    int boss_live;          /* DAT_00461330, which the sonar reads */
 
     /* the pause menu (FUN_0040b960) */
     int pause_cur;          /* DAT_004a902c, 0 = CONTINUE, 1 = EXIT */

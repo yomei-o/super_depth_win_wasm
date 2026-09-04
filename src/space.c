@@ -1100,7 +1100,7 @@ void space_frame(Game *g)
                 break;
             case 5:
                 if (e->c1 < 0x100) {
-                    vid_pat_scale(v, e->x, e->y, 0xa81, e->c1);
+                    vid_pat_scale(v, e->x, e->y, 0xa81, e->c1, 0x100);
                     e->mirror = 0;
                 } else if (e->mirror == 0) {
                     vid_pat(v, e->x, e->y, 0xa81);

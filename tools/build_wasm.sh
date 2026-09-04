@@ -33,6 +33,7 @@ done
 "$EMCC" -O2 -Wall -Wextra \
    -o superdepth.js \
    src/main_wasm.c src/game.c src/play.c src/air.c src/space.c \
+   src/boss.c \
    src/video.c src/dar.c \
    src/smf.c src/synth.c \
    $EMBED \
