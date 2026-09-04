@@ -478,7 +478,6 @@ Flash Bomb / Shot Special / Full Power / Ship 1up。
 だけで、それは入口が binary 中に無いので入れない。手を入れるなら:
 
 * デモの録画をページから使いやすくする（いまはダウンロード）
-* `docs/format.md` に資源（メニュー）の読みかたを足す
 
 下は積んできた順の記録。
 
