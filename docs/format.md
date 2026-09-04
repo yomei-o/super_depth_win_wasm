@@ -71,34 +71,73 @@ Mark Adler の blast（`tools/blast.c`）が解く。45 ファイルとも展開
 
 `disk/` に出る。README.md の表を見よ。
 
-## `.dar` — パターンの書庫（読みかけ）
+## `.dar` — パターンの書庫 — 確定
 
 `depth.dar` `depth1.dar` `depth2.dar` `space.dar` `ending.dar` `staff.dar`。
 本体の文字列が `pic\depth.dar` なので、製品では `pic\` に置かれる。
 `Pat*`（`PatEntryDAR` `PatBuildDAR` `PatAlloc2` `PatEntryID(#%d)`
 `PatEntryName('%s')`）が扱う「パターン」の入れ物。
 
+読みかたは `FUN_00419700`（`PatEntryDAR`）と `FUN_004199c0` そのまま。
+`python tools/dar.py <file>` が同じ歩き方をする。
+
 ```
-+0x00  "DAR:"
-+0x04  word 0x0138        どのファイルも同じ。版か
-+0x06  word パターン数     depth.dar 2887、staff.dar 291、depth1 9、ending 2
-+0x08  dword 4
++0x00  char[5]  "DAR:8"      FUN_004199c0 が 5 バイト比べる
++0x05  byte     版。0 か 1（2 以上は撥ねる）
++0x06  word     パターン数    ← あの関数の返り値
++0x08  dword    4
 +0x0c  0 が 4 バイト
-+0x10  RGBQUAD × 256      1024 バイト。頭は Windows の 16 色システム
-                          パレット（000080, 008000, ... c0c0c0）
-+0x410 パターンの並び
++0x10  RGBQUAD × 256         パレット 1024 バイト。頭は Windows の
+                             16 色システムパレット
++0x40c パターンの並び        ※ 0x410 ではない
 ```
 
-パターン 1 枚は、見えているところまでで
+パターン 1 枚（版 1。版 0 はヘッダ長 8 固定）:
 
 ```
-word 幅  word 高さ  ...  byte 名前の長さ  char 名前（4 の倍数に丸め）
-word ?   byte 画素[幅 × 高さ]      画素はパレット番号
+word  ヘッダ長 hlen          このワードの「次」から数える
+word  幅
+word  高さ
+word  1 行のバイト数 stride
+word  符号つき。このファイル群では -1
+[hlen > 13]
+word  ×3                    +6 / +0x1a / +0x12 へ。3 つめは高さの控えを上書き
+[hlen > 15]
+byte  名前の長さ             幅ワードから +14
+char  名前                   +15 から。4 の倍数に詰める
+byte  旗 ×4                 名前の後ろ。1 つは >> 3 されて種類になる
+画素  高さ × stride バイト
 ```
 
-`depth1.dar` の 1 枚目が 0x40 × 0x44 で名前 `sea01`、`ending.dar` の
-1 枚目が 0x81 × 0x84 で `earth192`。**ここは推測が混じっているので、
-`FUN_0041a3e0`（PatBuildDAR）と `FUN_004199c0` を読んでから確定させる。**
+次のパターンは **幅ワードの位置 + hlen + 高さ × stride**。
+この歩き方で 6 本とも**ファイルの末尾にぴったり着く**:
+
+| | パターン数 | 大きさ |
+|---|---|---|
+| `depth.dar` | 2887 | 1335036 |
+| `depth1.dar` / `depth2.dar` | 9 | 132072 |
+| `space.dar` | 50 | 336660 |
+| `staff.dar` | 291 | 330160 |
+| `ending.dar` | 2 | 18444 |
+
+**素の 8bpp のものは描けている。** `depth1.dar` の 9 枚は青い海のタイル
+（`sea01`..）、`staff.dar` の 1 枚目は Bio_100% のロゴ（`biologo_staff`
+300x184）で、パレットも当たっている。
+
+### まだ分からないところ
+
+`stride` が「幅を 4 に丸めた数」にならないパターンがある:
+
+* `kgfwhite` 16x33 stride **4** —— 16 画素に 4 バイトなので 8bpp ではない
+  （1bpp のマスクなら 2 バイト、4 に丸めて 4）
+* `depthlogo  t` 372x145 stride **260** —— 1 画素 1 バイトに足りない
+
+`FUN_00419700` が名前の後ろの旗の 1 つを `>> 3` して
+`piVar13 + 9` に入れ、その値で `local_14[]` の 5 本のポインタから 1 本を
+選んでいる（`local_14[0]` はファイルの先頭 + 8、残りは
+`FUN_00414ee0()` で確保した領域）。**つまりパターンには種類があり、
+種類ごとに読み方が違う。** `FUN_0041a3e0`（`PatBuildDAR`）と
+`FUN_0041a590` / `FUN_0041a670` / `FUN_0041a730` を読むこと。
 
 ## `stage3.bin`
 
